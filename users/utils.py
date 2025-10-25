@@ -1,14 +1,10 @@
-# users/utils.py
-
 import re
 import base64
 import json
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-from assistance.models import GmailCredential   # ✅ use the one that actually has the data
-
+from assistance.models import GmailCredential
 from transactions.models import Transaction
-
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
@@ -23,9 +19,7 @@ def fetch_latest_emails(user, max_results=5):
     """
     try:
         cred_obj = GmailCredential.objects.get(user=user)
-        token_data = cred_obj.token
-        if isinstance(token_data, str):
-            token_data = json.loads(token_data)
+        token_data = json.loads(cred_obj.token) if isinstance(cred_obj.token, str) else cred_obj.token
 
         creds = Credentials.from_authorized_user_info(token_data, SCOPES)
         service = build("gmail", "v1", credentials=creds)
@@ -56,6 +50,7 @@ def fetch_latest_emails(user, max_results=5):
                 "snippet": snippet,
             })
 
+        print(f"✅ Fetched {len(emails)} latest email(s) for {user.username}.")
         return emails
 
     except GmailCredential.DoesNotExist:
@@ -75,9 +70,7 @@ def fetch_recent_transactions(user, max_results=25):
     """
     try:
         cred_obj = GmailCredential.objects.get(user=user)
-        token_data = cred_obj.token
-        if isinstance(token_data, str):
-            token_data = json.loads(token_data)
+        token_data = json.loads(cred_obj.token) if isinstance(cred_obj.token, str) else cred_obj.token
 
         creds = Credentials.from_authorized_user_info(token_data, SCOPES)
         service = build("gmail", "v1", credentials=creds)
@@ -104,6 +97,7 @@ def fetch_recent_transactions(user, max_results=25):
             parts = payload.get("parts", [])
             body_text = msg_data.get("snippet", "")
 
+            # Decode email body parts
             for part in parts:
                 data = part.get("body", {}).get("data")
                 if data:
@@ -113,8 +107,10 @@ def fetch_recent_transactions(user, max_results=25):
                     except Exception:
                         continue
 
+            # Clean text
             text = re.sub(r"\s+", " ", body_text).strip()
 
+            # Extract transaction details
             amt_match = re.search(r"Amount[:=\-]?\s*[₹$€]?\s?([\d,]+(?:\.\d{1,2})?)", text, re.I)
             cat_match = re.search(
                 r"Category[:=\-]?\s*([A-Za-z ]+?)(?=\s*(?:Transaction\s*Type|Type|Date|Amount|₹|$))",
@@ -129,18 +125,12 @@ def fetch_recent_transactions(user, max_results=25):
             txn_type = type_match.group(1).strip().lower() if type_match else ""
             date = date_match.group(1).strip() if date_match else ""
 
-            category = re.sub(r"(?i)\b(transaction\s*type|txn\s*type|trans\s*type|type)\b", "", category)
-            category = category.replace("  ", " ").strip().capitalize()
-            date = re.sub(r"(\d{4})-0+(\d{1,2})", r"\1-\2", date)
-
-            # ✅ Infer missing category intelligently
+            # Infer missing category/type intelligently
             if not category or category.lower() in ["", "uncategorized", "transaction type"]:
                 if re.search(r"\bcredited\b|\bdeposit(ed)?\b|\bincome\b", text, re.I):
-                    category = "Deposit"
-                    txn_type = txn_type or "credit"
+                    category, txn_type = "Deposit", txn_type or "credit"
                 elif re.search(r"\bdebited\b|\bwithdraw(al|n)?\b|\bpayment\b|\bpurchase\b|\bsent\b", text, re.I):
-                    category = "Withdrawal"
-                    txn_type = txn_type or "debit"
+                    category, txn_type = "Withdrawal", txn_type or "debit"
                 elif re.search(r"\btransfer\b|\bupi\b|\bimps\b|\bneft\b", text, re.I):
                     category = "Transfer"
                 elif re.search(r"\brefund\b", text, re.I):
@@ -155,7 +145,7 @@ def fetch_recent_transactions(user, max_results=25):
 
             transactions.append({
                 "amount": amount,
-                "category": category,
+                "category": category.capitalize(),
                 "transaction_type": txn_type,
                 "date": date,
                 "currency": "₹",
@@ -178,9 +168,9 @@ def fetch_recent_transactions(user, max_results=25):
 def save_transactions_to_db(user, transactions):
     """
     Save fetched transactions into the database while avoiding duplicates.
-    Automatically capitalizes category names.
     """
     saved_count = 0
+
     for txn in transactions:
         amount = txn.get("amount")
         category = txn.get("category", "").capitalize().strip()
@@ -188,6 +178,7 @@ def save_transactions_to_db(user, transactions):
         date = txn.get("date")
         currency = txn.get("currency", "₹")
 
+        # Avoid duplicates
         if Transaction.objects.filter(user=user, amount=amount, category=category, timestamp__date=date).exists():
             continue
 
@@ -220,6 +211,7 @@ def generate_suggestions(profile, transactions=None):
 
     available = income - expenses
 
+    # Core financial health checks
     if expenses > income:
         suggestions.append("⚠️ Your expenses exceed your income. Reduce non-essential spending.")
     else:
@@ -235,6 +227,7 @@ def generate_suggestions(profile, transactions=None):
     else:
         suggestions.append("✅ You’re debt-free. Great job!")
 
+    # Investment advice
     if available > 0:
         if risk == "low":
             suggestions.append(f"💡 Invest ₹{available:,.2f} in fixed deposits or bonds.")
@@ -243,6 +236,7 @@ def generate_suggestions(profile, transactions=None):
         elif risk == "high":
             suggestions.append(f"💡 Aggressive strategy: ₹{available*0.7:,.2f} in equities, ₹{available*0.3:,.2f} in stable funds.")
 
+    # Transaction-based alerts
     if transactions:
         seen_expenses = set()
         for txn in transactions:
@@ -260,25 +254,22 @@ def generate_suggestions(profile, transactions=None):
     suggestions.append("💡 Review your finances monthly and rebalance investments.")
     return suggestions
 
+
 # -------------------------------
 # 📧 GET GMAIL PROFILE
 # -------------------------------
 def get_gmail_profile(user):
     """
-    Return Gmail profile information (like the connected Gmail address)
-    for the given user based on their stored credentials.
+    Return Gmail profile information for the connected account.
     """
-
     try:
         cred_obj = GmailCredential.objects.get(user=user)
-        token_data = cred_obj.token
-        if isinstance(token_data, str):
-            token_data = json.loads(token_data)
+        token_data = json.loads(cred_obj.token) if isinstance(cred_obj.token, str) else cred_obj.token
 
         creds = Credentials.from_authorized_user_info(token_data, SCOPES)
         service = build("gmail", "v1", credentials=creds)
-
         profile = service.users().getProfile(userId="me").execute()
+
         return {
             "emailAddress": profile.get("emailAddress"),
             "messagesTotal": profile.get("messagesTotal"),
