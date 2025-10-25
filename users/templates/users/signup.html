@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Finance System{% endblock %}
+
+{% block content %}
+<style>
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(112deg, #ece3fa 18%, #bb8afd 99%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.top-navbar {
+  position: fixed;
+  left: 0; top: 0;
+  background: #8936d0; /* Changed to a deep solid purple */
+  width: 100vw; height: 56px; z-index: 999;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 14px #8030b438; padding: 0 38px;
+}
+.top-navbar .brand {
+  color: #fff; font-size: 1.27rem; font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.top-navbar .nav-links a {
+  color: #ecd4fe; text-decoration: none; font-weight: 500;
+  margin-left: 32px; font-size: 1.07rem; transition: color .18s;
+}
+.top-navbar .nav-links a:hover { color: #bb8afd; }
+
+.card-container {
+  background: linear-gradient(135deg, #fff8fd 95%, #d7c8ff 100%);
+  max-width: 500px; margin: 80px auto 0 auto;
+  border-radius: 34px;
+  box-shadow: 0 10px 48px #bb8afd39, 0 1px 12px #9145d229;
+  border: 3px solid #9145d2;
+  padding: 48px 38px 36px 38px;
+  position: relative;
+}
+.card-container h3 {
+  font-family: inherit;
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: #9145d2;
+  margin-bottom: 10px;
+  text-align: center;
+  letter-spacing: .02em;
+}
+.card-container label {
+  font-weight: 600;
+  color: #6a34a4;
+  margin-bottom: 4px;
+}
+.form-control {
+  border-radius: 1.5em;
+  border: 1.8px solid #bb8afd;
+  padding: 12px 18px;
+  font-size: 1.09rem;
+  width: 100%;
+  background: #f5eafd;
+  color: #703ea4;
+  box-shadow: none;
+  margin-bottom: 2px;
+  outline: none;
+  transition: border-color 0.16s, box-shadow 0.18s;
+}
+.form-control:focus {
+  border-color: #9145d2;
+  background: #f2e1fa;
+  box-shadow: 0 0 0 2px #bb8afd44;
+}
+.btn-primary {
+  background: linear-gradient(90deg, #bb8afd 12%, #9145d2 93%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.14rem;
+  border: none;
+  border-radius: 2em;
+  box-shadow: 0 2px 18px #bb8afd3a, 0 2px 8px #9145d220;
+  margin-top: 18px;
+  padding: 12px 0;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.18s, box-shadow 0.16s, transform 0.14s;
+}
+.btn-primary:hover {
+  background: linear-gradient(93deg, #9145d2 22%, #bb8afd 100%);
+  box-shadow: 0 8px 32px #9145d240;
+  transform: translateY(-2px) scale(1.03);
+}
+.alert {
+  background: #f7e1fd;
+  color: #9145d2;
+  border-radius: 1.5em;
+  padding: 8px 20px;
+  margin: 13px 0;
+  font-weight: 600;
+  box-shadow: 0 1px 12px #bb8afd18;
+}
+.text-center { text-align: center; }
+.mb-3 { margin-bottom: 22px; }
+.mt-3 { margin-top: 14px; }
+.card-container a { color: #9145d2; text-decoration: underline; font-weight: 600; }
+.card-container a:hover { color: #bb8afd; }
+@media (max-width:700px) {
+  .card-container { padding: 28px 7px 18px 7px; margin-top: 33px;}
+  .card-container h3 { font-size: 1.18rem; margin-bottom: 8px;}
+}
+</style>
+<div class="top-navbar">
+  <div class="brand">FinSecure</div>
+  <div class="nav-links">
+    <a href="{% url 'login' %}">Login</a>
+    <a href="{% url 'signup' %}">Register</a>
+  </div>
+</div>
+<div class="card-container">
+  <h3 class="text-center mb-3">Create an Account</h3>
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+  <form method="POST">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="username" class="form-label">Username</label>
+      <input type="text" name="username" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" name="email" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label for="password1" class="form-label">Password</label>
+      <input type="password" name="password1" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label for="password2" class="form-label">Confirm Password</label>
+      <input type="password" name="password2" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Register</button>
+  </form>
+  <p class="text-center mt-3">
+    Already have an account? <a href="{% url 'login' %}">Login</a>
+  </p>
+</div>
+{% endblock %}

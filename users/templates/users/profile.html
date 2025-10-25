@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Profile | FinSecure{% endblock %}
+
+{% block content %}
+<style>
+/* FinSecure Profile Styles */
+.fs-profile-bg {
+  background: radial-gradient(ellipse 65% 60% at 57% 70%, #e8cef7 37%, #a480e3 100%);
+  min-height: 100vh;
+  padding: 0;
+  margin: 0;
+}
+.fs-container {
+  max-width: 750px;
+  margin: 38px auto 0 auto;
+  padding: 0 12px;
+}
+.fs-card {
+  background: linear-gradient(127deg,#f7f1ff 92%,#dfcafd 100%);
+  box-shadow: 0 8px 32px #cda7ff36, 0 2px 8px #a480e319;
+  border-radius: 20px;
+  padding: 32px 30px;
+  margin-bottom: 25px;
+}
+.fs-card h2 { color: #965af7; font-weight: 700; margin-bottom: 13px; font-size: 2.1rem; }
+.fs-subcard { background: #faf2ff; border-radius: 15px; margin-bottom: 19px; padding: 0; overflow: hidden; }
+.fs-subcard-header { font-weight: 600; padding: 0.7em 1.6em; font-size: 1.13em; }
+.bg-fs-dark {background: #965af7; color: #fff;}
+.bg-fs-primary {background: #7a61ae; color: #fff;}
+.bg-fs-success {background: #27ae60; color: #fff;}
+.fs-subcard-body { padding: 14px 16px; }
+.fs-btn { border-radius: 25px; font-weight: 700; font-size: 1.08em; padding: 12px 0; width: 100%; margin-bottom: 10px;
+  background: linear-gradient(90deg,#965af7 60%, #cda7ff 100%); color: #fff; border: none; cursor:pointer; text-align:center; display:block; }
+.fs-btn:hover { background:linear-gradient(90deg,#7a61ae 60%,#965af7 100%); }
+.form-control { border-radius: 10px; }
+.errorlist { color: red; font-size: 0.9em; margin: 4px 0 8px 0; list-style: none; padding: 0; }
+</style>
+
+<div class="fs-profile-bg">
+  <div class="fs-container">
+    <div class="fs-card">
+      <h2>👤 My Profile</h2>
+      <p class="text-muted">Manage your personal and financial details</p>
+
+      <!-- Show Django messages -->
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- Profile Update Form -->
+      <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- User Info -->
+        <div class="fs-subcard shadow-sm mb-3">
+          <div class="fs-subcard-header bg-fs-dark">User Information</div>
+          <div class="fs-subcard-body">
+            <div class="mb-3">
+              {{ u_form.username.label_tag }} {{ u_form.username }}
+              {{ u_form.username.errors }}
+            </div>
+            <div class="mb-3">
+              {{ u_form.email.label_tag }} {{ u_form.email }}
+              {{ u_form.email.errors }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile Details -->
+        <div class="fs-subcard shadow-sm mb-3">
+          <div class="fs-subcard-header bg-fs-primary">Profile Details</div>
+          <div class="fs-subcard-body">
+            <div class="mb-3">{{ p_form.name.label_tag }} {{ p_form.name }} {{ p_form.name.errors }}</div>
+            <div class="mb-3">{{ p_form.phone.label_tag }} {{ p_form.phone }} {{ p_form.phone.errors }}</div>
+            <div class="mb-3">{{ p_form.address.label_tag }} {{ p_form.address }} {{ p_form.address.errors }}</div>
+            <div class="mb-3">{{ p_form.dob.label_tag }} {{ p_form.dob }} {{ p_form.dob.errors }}</div>
+            <div class="mb-3">{{ p_form.gender.label_tag }} {{ p_form.gender }} {{ p_form.gender.errors }}</div>
+            <div class="mb-3">{{ p_form.occupation.label_tag }} {{ p_form.occupation }} {{ p_form.occupation.errors }}</div>
+            <div class="mb-3">{{ p_form.income.label_tag }} {{ p_form.income }} {{ p_form.income.errors }}</div>
+          </div>
+        </div>
+
+        <!-- Profile Photo -->
+        <div class="fs-subcard shadow-sm mb-3">
+          <div class="fs-subcard-header bg-fs-success">Profile Photo</div>
+          <div class="fs-subcard-body">
+            {% if request.user.profile.profile_photo %}
+              <p>Current:</p>
+              <img src="{{ request.user.profile.profile_photo.url }}" 
+                   class="img-thumbnail mb-2" width="150" alt="Profile Photo">
+            {% endif %}
+            <div class="mb-3">
+              {{ p_form.profile_photo.label_tag }} {{ p_form.profile_photo }}
+              {{ p_form.profile_photo.errors }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <button type="submit" class="fs-btn">💾 Save Changes</button>
+        <a href="{% url 'dashboard' %}" class="fs-btn" style="background:#555;">⬅️ Back to Dashboard</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Update Email{% endblock %}
+
+{% block content %}
+<div class="card p-4 shadow-sm rounded">
+  <h3>Update Your Email</h3>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="email" class="form-label">New Email</label>
+      <input type="email" name="email" id="email" class="form-control" placeholder="Enter new email" required>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Update Email</button>
+  </form>
+</div>
+{% endblock %}

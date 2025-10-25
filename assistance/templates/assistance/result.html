@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Financial Assistance Result</title>
+    <!-- Bootstrap CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body {
+            background: radial-gradient(ellipse 70% 60% at 55% 60%, #f2e6ff 40%, #a480e3 100%);
+            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            padding-top: 40px;
+            color: #673b89;
+        }
+        .card {
+            max-width: 900px;
+            margin: 36px auto;
+            border-radius: 20px;
+            box-shadow: 0px 4px 32px #a480e322, 0 1px 9px #7a4fff15;
+            padding: 34px 28px 28px 28px;
+            background: linear-gradient(135deg, #faf7ff 85%, #e3d1fd 100%);
+        }
+        h2, h4 {
+            color: #7a4fff;
+            text-align: center;
+            font-weight: 700;
+        }
+        h4 {
+            font-size: 1.19rem;
+            text-align: left;
+        }
+        ul.suggestions {
+            list-style: none;
+            padding-left: 0;
+        }
+        ul.suggestions li {
+            background: #eee5fa;
+            border-left: 5px solid #b081ff;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            color: #673b89;
+            letter-spacing: 0.01em;
+        }
+        ul.suggestions li.alert {
+            background: #fbefff;
+            border-left-color: #ca6cf7;
+            color: #b232ba;
+        }
+        .ml-result {
+            text-align: center;
+            margin-top: 24px;
+            padding: 17px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1.13em;
+        }
+        .ml-yes {
+            background: linear-gradient(90deg,#f9ccff 60%,#f9edff 100%);
+            color: #b232ba;
+            border: 2px solid #ca6cf7;
+        }
+        .ml-no {
+            background: linear-gradient(90deg,#e7eafd 80%,#f9f7ff 100%);
+            color: #7a4fff;
+            border: 2px solid #b081ff;
+        }
+        .info-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .info-row p {
+            flex: 0 0 48%;
+            margin-bottom: 10px;
+            color: #7a4fff;
+            background: #f7f4fe;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-weight: 500;
+            letter-spacing: .04em;
+        }
+        .btn-primary {
+            background: linear-gradient(90deg,#965af7 60%,#cda7ff 100%);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            border-radius: 33px;
+            width: 100%;
+            padding: 13px 0;
+            font-size: 1.08em;
+            box-shadow: 0 2px 14px #bb8afd28;
+            transition: background .18s;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(90deg,#7a4fff 60%,#965af7 100%);
+            color: #fff;
+        }
+        .btn-sm {
+            font-size: 0.85em;
+            padding: 5px 10px;
+        }
+        hr {
+            border-top: 2px solid #dab7ff;
+        }
+        table.transactions {
+            width: 100%;
+            background: #fdfaff;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        table.transactions th {
+            background: #ede2ff;
+            color: #673b89;
+            padding: 10px;
+        }
+        table.transactions td {
+            padding: 10px;
+            border-bottom: 1px solid #e7d7ff;
+            color: #673b89;
+            vertical-align: middle;
+        }
+        table.transactions tr:last-child td {
+            border-bottom: none;
+        }
+        table.transactions td:last-child {
+            text-align: center;
+        }
+        @media (max-width:600px) {
+            .card {padding: 14px 3px;}
+            .info-row p {flex: 0 0 100%;padding:6px 8px;}
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card">
+            <h2 class="mb-3">Financial Suggestions for {{ profile.name }}</h2>
+
+            <!-- Profile Info -->
+            <div class="info-row">
+                <p><strong>Income:</strong> ₹{{ profile.income }}</p>
+                <p><strong>Expenses:</strong> ₹{{ profile.expenses }}</p>
+                <p><strong>Credit Score:</strong> {{ profile.credit_score }}</p>
+                <p><strong>Debts:</strong> ₹{{ profile.debts|default:"0" }}</p>
+                <p><strong>Monthly Investments:</strong> ₹{{ profile.monthly_investment|default:"0" }}</p>
+                <p><strong>Risk Tolerance:</strong> {{ profile.risk_tolerance|default:"Medium" }}</p>
+                <p><strong>Monthly Savings Goal:</strong> ₹{{ profile.monthly_savings_goal|default:"0" }}</p>
+                <p><strong>Financial Goals:</strong> {{ profile.financial_goals|default:"Not set" }}</p>
+            </div>
+
+            <hr />
+            <!-- Recommendations from Profile -->
+            <h4>💡 Profile-Based Recommendations:</h4>
+            <ul class="suggestions">
+                {% for suggestion in suggestions %}
+                    {% if "⚠️" in suggestion %}
+                        <li class="alert">{{ suggestion }}</li>
+                    {% else %}
+                        <li>{{ suggestion }}</li>
+                    {% endif %}
+                {% empty %}
+                    <li>No profile-based suggestions.</li>
+                {% endfor %}
+            </ul>
+
+            <!-- Gmail Suggestions -->
+            {% if gmail_suggestions %}
+            <hr />
+            <h4>📧 Gmail-Based Suggestions:</h4>
+            <ul class="suggestions">
+                {% for txn_suggestion in gmail_suggestions %}
+                    {% if "⚠️" in txn_suggestion %}
+                        <li class="alert">{{ txn_suggestion }}</li>
+                    {% else %}
+                        <li>{{ txn_suggestion }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <!-- Gmail Transactions -->
+            {% if transactions %}
+            <hr />
+            <h4>💳 Recent Gmail Transactions:</h4>
+            <div class="table-responsive">
+                <table class="transactions table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th class="text-end">Amount</th>
+                            <th>Email</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for txn in transactions %}
+                            <tr>
+                                <td>{{ txn.date|default:"—" }}</td>
+                                <td>{{ txn.description }}</td>
+                                <td class="text-end">{{ txn.currency }} {{ txn.amount }}</td>
+                                <td>
+                                    <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}" 
+                                       target="_blank" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        📧 View Email
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4">No transactions found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p class="text-center mt-3">
+                    ⚠️ No Gmail transactions available. 
+                    <a href="{% url 'connect_gmail' %}" class="btn btn-sm btn-outline-primary mt-2">Reconnect Gmail</a>
+                </p>
+            {% endif %}
+
+            <!-- ✅ AI-Powered Recommendations -->
+            {% if ml_recommendations %}
+            <hr />
+            <h4>🤖 AI-Powered Recommendations:</h4>
+            <ul class="suggestions">
+                {% for r in ml_recommendations %}
+                    <li>{{ r }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <!-- ML Assistance Result -->
+            <div class="ml-result {% if ml_assistance_required %}ml-yes{% else %}ml-no{% endif %}">
+                {% if ml_assistance_required %}
+                    ⚠️ According to our ML model, you <strong>may need financial assistance</strong>.
+                {% else %}
+                    ✅ According to our ML model, you <strong>likely do not need financial assistance</strong>.
+                {% endif %}
+            </div>
+
+            <a href="{% url 'assist_home' %}" class="btn btn-primary mt-3">🔙 Back to Form</a>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

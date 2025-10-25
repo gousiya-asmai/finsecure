@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Transaction | FinSecure</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            background: radial-gradient(ellipse 70% 60% at 55% 60%, #e8cef7 30%, #a480e3 100%);
+            color: #4f3973;
+            display: flex;
+            flex-direction: column;
+        }
+        .topbar {
+            background: #965af7;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: .8px;
+            padding: 0.95em 2.1em;
+            border-bottom: 2px solid #cda7ff;
+            box-shadow: 0 4px 24px #965af72c;
+        }
+        .form-section {
+            flex:1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 36px 10px;
+        }
+        .transaction-card {
+            max-width: 360px;              /* <--- Decreased from 600px */
+            width: 100%;
+            background: linear-gradient(135deg,#f7f1ff 85%,#dfcafd 100%);
+            border-radius: 22px;
+            box-shadow: 0 10px 36px #cda7ff28, 0 1px 8px #965af714;
+            padding: 24px 16px 20px 16px;  /* <--- Decreased padding */
+            position: relative;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            margin-top: 10px;
+            animation: fadein .6s cubic-bezier(.6,.7,.2,1);
+        }
+        @keyframes fadein {
+            from {opacity:0; transform:translateY(18px);}
+            to   {opacity:1; transform:none;}
+        }
+        .lock-badge {
+            position: absolute;
+            top: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #965af7;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            box-shadow: 0 2px 14px #965af736;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .lock-badge .bi {
+            color: #fff;
+            font-size: 1.75em;
+        }
+        .transaction-title {
+            text-align: center;
+            font-size: 2rem;      /* <--- Smaller title */
+            font-weight: 700;
+            color: #965af7;
+            margin: 12px 0 10px 0;
+            letter-spacing: .6px;
+        }
+        .transaction-subtitle {
+            color: #714eae;
+            font-size: 1.06rem;   /* <--- Smaller subtitle */
+            text-align:center;
+            margin-bottom: 13px;
+            font-weight: 500;
+            letter-spacing: .1px;
+        }
+        .transaction-description {
+            text-align: center;
+            color: #675996;
+            margin-bottom:20px;   /* <--- Decreased bottom margin */
+            font-size: 0.98rem;   /* <--- Smaller font */
+            font-weight: 400;
+        }
+        form {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-top: 5px;
+        }
+        form p {
+            margin-bottom: 0;
+        }
+        .transaction-card input,
+        .transaction-card select,
+        .transaction-card textarea {
+            background: #f4eeff;
+            border: 2px solid #d9c3fa;
+            font-size: 1em;       /* <--- Smaller font */
+            border-radius: 11px;  /* <--- Slightly smaller radius */
+            padding: 10px;        /* <--- Less padding */
+            width: 100%;
+            color: #4e3966;
+            transition: border-color 0.22s;
+            margin-top: 4px;
+            box-sizing: border-box;
+            box-shadow: 0 1px 8px #cda7ff12 inset;
+        }
+        .transaction-card input:focus,
+        .transaction-card select:focus,
+        .transaction-card textarea:focus {
+            border-color: #965af7;
+            outline: none;
+            box-shadow: 0 0 0 2px #cda7ff30;
+        }
+        .transaction-card label {
+            font-weight: 500;
+            color: #715aa1;
+            letter-spacing: .1px;
+            margin-bottom: 2px;
+            font-size: 0.98em;
+        }
+        .btn-submit {
+            margin-top: 14px;
+            background: linear-gradient(90deg,#965af7 30%,#cda7ff 90%);
+            color: #fff;
+            font-weight: 700;
+            font-size: 1em;       /* <--- Smaller font */
+            border: none;
+            border-radius: 22px;
+            padding: 11px 0;      /* <--- Less vertical padding */
+            cursor: pointer;
+            width: 100%;
+            box-shadow: 0 4px 18px #965af733;
+            transition: background .18s;
+        }
+        .btn-submit:hover {
+            background: linear-gradient(90deg,#714eae 30%,#965af7 90%);
+        }
+        .back-link {
+            margin-top:25px;
+            color: #965af7;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 1em;
+            text-align:center;
+            transition: color .16s;
+            display:block;
+        }
+        .back-link:hover {
+            color: #714eae;
+            text-decoration: underline;
+        }
+        @media (max-width:600px) {
+            .transaction-card {padding:17px 5px 13px 5px;}
+            .topbar {font-size:1.01rem;padding:.7em 1.1em;}
+            .transaction-title { font-size: 1.3rem;}
+        }
+    </style>
+    <!-- Bootstrap Icons CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="topbar">
+        FinSecure
+    </div>
+    <div class="form-section">
+        <div class="transaction-card">
+            <div class="lock-badge"><i class="bi bi-lock-fill"></i></div>
+            <div class="transaction-title">Add Transaction</div>
+            <div class="transaction-subtitle">
+                Enter your financial transaction details
+            </div>
+            <div class="transaction-description">
+                Quickly record your spending and income. Smart fraud detection protects each entry.
+            </div>
+            <form id="transactionForm" method="post" action="{% url 'transactions:add_transaction' %}">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button class="btn-submit" type="submit">Submit Transaction</button>
+            </form>
+            <a class="back-link" href="{% url 'dashboard' %}">⬅ Back to Dashboard</a>
+        </div>
+    </div>
+    <script>
+    document.getElementById("transactionForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        const form = this;
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: "POST",
+            body: formData,
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // ✅ Redirect to dashboard
+                window.location.href = "{% url 'dashboard' %}";
+            } else {
+                alert("❌ Error: " + (data.error || "Something went wrong."));
+            }
+        })
+        .catch(err => {
+            console.error("Error:", err);
+            alert("Failed to submit transaction.");
+        });
+    });
+    </script>
+</body>
+</html>

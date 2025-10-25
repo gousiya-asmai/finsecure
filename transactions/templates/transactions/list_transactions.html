@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Transaction List | FinSecure</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+      background: radial-gradient(ellipse 65% 65% at 60% 70%, #e8cef7 35%, #a480e3 100%);
+      color: #4f3973;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .topbar {
+      background: #965af7;
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.21rem;
+      letter-spacing: .9px;
+      padding: 1em 2em;
+      border-bottom: 2px solid #cda7ff;
+      box-shadow: 0 4px 20px #965af72c;
+      margin-bottom: 40px;
+    }
+    .container {
+      margin: 0 auto;
+      max-width: 910px;
+      background: linear-gradient(135deg,#faf2ff 90%,#dfcafd 100%);
+      border-radius: 20px;
+      box-shadow: 0 8px 28px #cda7ff26, 0 1px 9px #965af713;
+      overflow: hidden;
+      padding: 42px 34px 38px 34px;
+      margin-top: 25px;
+      animation: fadein .7s cubic-bezier(.62,.72,.19,1.01);
+    }
+    @keyframes fadein {
+      from {opacity:0; transform:translateY(22px);}
+      to   {opacity:1; transform:none;}
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 26px;
+      color: #965af7;
+      font-size: 2.1rem;
+      font-weight: 700;
+      letter-spacing: .4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #f9f6ff;
+      border-radius: 13px;
+      margin-bottom:28px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px #b690e01c;
+    }
+    thead th {
+      background: linear-gradient(90deg,#965af7 70%, #b690e0 100%);
+      color: #fff;
+      padding: 18px 20px;
+      font-weight: 700;
+      text-align: left;
+      font-size: 1.08em;
+      border-bottom: 2px solid #cda7ff;
+      letter-spacing: .13px;
+    }
+    tbody td {
+      padding: 15px 22px;
+      font-size: 1.08em;
+      border-bottom: 1px solid #eee;
+      transition: background .15s;
+    }
+    tbody tr {
+      background: #f7f3ff;
+      transition: background .2s;
+    }
+    tbody tr:nth-child(even) {
+      background: #f2eefe;
+    }
+    tbody tr:hover {
+      background: #ede2fc;
+    }
+    tbody td:last-child {
+      font-weight: 700;
+      text-align: center;
+    }
+    tbody td:last-child {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    tbody td:last-child:before {
+      font-family: 'Segoe UI',Arial,sans-serif;
+      margin-right:5px;
+    }
+    tbody td:last-child {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    tbody tr td:last-child:contains("No"),
+    tbody tr td:last-child:empty {
+      color: #27ae60;
+    }
+    /* For Django logic: use class for dynamic color */
+    .fraud-no { color: #27ae60 !important; }
+    .fraud-yes { color: #e74c3c !important; }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .actions {
+      display: flex;
+      gap: 24px;
+      justify-content: flex-end;
+      align-items:center;
+      margin-top: 26px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 13px 32px;
+      font-size: 1.09em;
+      border-radius: 27px;
+      font-weight: 700;
+      text-decoration: none;
+      text-align: center;
+      box-shadow: 0 2px 14px #965af728;
+      transition: background .17s, color .15s;
+      border: none;
+      outline: none;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg,#965af7 60%,#cda7ff 100%);
+      color: #fff;
+      margin-right: 2px;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(90deg,#7a4fff 60%,#965af7 100%);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: linear-gradient(90deg,#dfcafd 40%,#faf2ff 100%);
+      color: #965af7;
+      border: 2px solid #b690e0;
+      margin-left: 2px;
+    }
+    .btn-secondary:hover {
+      background: linear-gradient(90deg,#ece0fa 40%,#cda7ff 100%);
+      color: #714eae;
+    }
+    @media (max-width:600px) {
+      .container {padding:24px 6px 18px 6px;}
+      table thead th, table tbody td {padding:11px 5px;font-size:.98em;}
+      .btn {padding:10px 15px;font-size:.99em;}
+      .actions {gap:7px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    FinSecure
+  </div>
+  <div class="container">
+    <h1>Transaction List</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Date &amp; Time</th>
+          <th>Category</th>
+          <th>Transaction Type</th>
+          <th>Amount</th>
+          <th>Fraud</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for txn in transactions %}
+        <tr>
+          <td>{{ txn.timestamp }}</td>
+          <td>{{ txn.category }}</td>
+          <td>{{ txn.transaction_type }}</td>
+          <td>{{ txn.amount }}</td>
+          <td class="{% if txn.is_fraud %}fraud-yes{% else %}fraud-no{% endif %}">
+            {% if txn.is_fraud %}Yes{% else %}No{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center;color:#965af7;">No transactions found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="actions">
+      <a href="{% url 'transactions:add_transaction' %}" class="btn btn-primary">Add New Transaction</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-secondary">&#8592; Back</a>
+    </div>
+  </div>
+</body>
+</html>

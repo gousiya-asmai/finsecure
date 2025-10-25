@@ -1,0 +1,20 @@
+# Ignore the database file
+db.sqlite3
+
+# Ignore Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore environment files
+.env
+*.env
+
+# Ignore local settings
+*.log
+.DS_Store
+
+# Ignore virtual environment
+venv/
+env/
+.fensecureenv/
