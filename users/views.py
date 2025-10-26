@@ -121,8 +121,7 @@ def login_view(request):
     return render(request, "users/login.html")
 # ------------------- OTP Verification -------------------
 
-from django.contrib.auth import login
-from django.conf import settings
+
 
 def verify_otp_view(request):
     if request.method == "POST":
@@ -131,18 +130,18 @@ def verify_otp_view(request):
         user_id = request.session.get("user_id")
         otp_expiry = request.session.get("otp_expiry")
 
+        # Expiry check
         if otp_expiry and timezone.now() > timezone.datetime.fromisoformat(otp_expiry):
             messages.error(request, "⏳ OTP expired. Please request a new one.")
-            for k in ["otp", "user_id", "otp_expiry"]:
-                request.session.pop(k, None)
-            return redirect("login")
+            return redirect("login")  # Don't pop session values here!
 
+        # OTP match
         if session_otp and input_otp == session_otp:
             try:
                 user = User.objects.get(id=user_id)
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-          # Pass backend explicitly
                 _check_profile_and_send_email(user)
+                # Pop session values only after successful login/just before redirect
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
                 return redirect("dashboard")
@@ -154,7 +153,6 @@ def verify_otp_view(request):
             return redirect("verify_otp")
 
     return render(request, "users/verify_otp.html")
-
 
 
 # ------------------- Resend OTP -------------------
