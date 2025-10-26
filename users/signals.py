@@ -10,18 +10,14 @@ from .models import UserProfile
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
-    """
-    Ensure every User has a related UserProfile.
-    """
+    """Ensure every User has a related UserProfile."""
     if created:
-        # Create profile for new user
         UserProfile.objects.create(
             user=instance,
             name=instance.username,
             email=instance.email
         )
     else:
-        # Ensure profile exists (get_or_create)
         UserProfile.objects.get_or_create(
             user=instance,
             defaults={"name": instance.username, "email": instance.email}
@@ -30,24 +26,17 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
 
 @receiver(user_logged_in)
 def check_profile_completeness(sender, request, user, **kwargs):
-    """
-    After user logs in, check if profile is incomplete.
-    Show a warning message on dashboard instead of sending email.
-    """
+    """Check if profile is incomplete and show warning message."""
     try:
         profile = user.profile
         if not profile.is_complete():
-            # Show warning message on dashboard
             messages.warning(
                 request,
-                "⚠️ Your profile is incomplete. Please update your profile with "
-                "photo, occupation, and income details to enjoy full features."
+                "⚠️ Your profile is incomplete. Please complete your profile for full access."
             )
-            logging.info(f"Profile incomplete warning shown for user: {user.username}")
+            logging.info(f"Profile incomplete warning for: {user.username}")
     except UserProfile.DoesNotExist:
-        # Create profile if it doesn't exist
         try:
             UserProfile.objects.create(user=user, name=user.username, email=user.email)
-            logging.info(f"Created profile for user: {user.username}")
         except Exception as e:
-            logging.error(f"Profile creation failed for {user.username}: {e}")
+            logging.error(f"Profile creation failed: {e}")
