@@ -99,13 +99,16 @@ def login_view(request):
                     send_mail(
                         subject="Your Login OTP",
                         message=f"Your OTP for login is: {otp}\n\n(Valid for 5 minutes)",
-                        from_email="noreply@financesystem.com",
+                        from_email="finsecure7@gmail.com",  # Your verified SendGrid sender
                         recipient_list=[email],
                         fail_silently=False,
                     )
                     messages.success(request, f"✅ OTP sent to {email}. Please verify.")
                     return redirect("verify_otp")
                 except Exception as e:
+                    import logging
+                    logging.error(f"OTP email send error: {e}", exc_info=True)
+                    print(f"OTP email send error: {e}")
                     messages.error(request, f"Failed to send OTP: {str(e)}")
                     return redirect("login")
             else:
