@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.db.models import Sum, Count
 from django.http import JsonResponse
 import random
-
+import logging
 # Models
 from transactions.models import Transaction
 from assistance.models import SmartSuggestion
@@ -18,6 +18,8 @@ from users.models import UserProfile
 from django.shortcuts import render, redirect
 
 from users.utils import fetch_latest_emails, fetch_recent_transactions, save_transactions_to_db
+from users.sendgrid_utils import send_otp_via_sendgrid
+
 # Utils (Removed gmail_authenticate)
 from users.utils import (
     fetch_latest_emails,
@@ -96,17 +98,13 @@ def login_view(request):
                 request.session["otp_expiry"] = (timezone.now() + timezone.timedelta(minutes=5)).isoformat()
 
                 try:
-                    send_mail(
-                        subject="Your Login OTP",
-                        message=f"Your OTP for login is: {otp}\n\n(Valid for 5 minutes)",
-                        from_email="finsecure7@gmail.com",  # Your verified SendGrid sender
-                        recipient_list=[email],
-                        fail_silently=False,
-                    )
-                    messages.success(request, f"✅ OTP sent to {email}. Please verify.")
+                    response_code = send_otp_via_sendgrid(email, otp)
+                    if response_code == 202:
+                        messages.success(request, f"✅ OTP sent to {email}. Please verify.")
+                    else:
+                        messages.error(request, f"Failed to send OTP, status code: {response_code}")
                     return redirect("verify_otp")
                 except Exception as e:
-                    import logging
                     logging.error(f"OTP email send error: {e}", exc_info=True)
                     print(f"OTP email send error: {e}")
                     messages.error(request, f"Failed to send OTP: {str(e)}")
@@ -116,8 +114,6 @@ def login_view(request):
                 return redirect("login")
 
     return render(request, "users/login.html")
-
-
 # ------------------- OTP Verification -------------------
 def verify_otp_view(request):
     if request.method == "POST":
