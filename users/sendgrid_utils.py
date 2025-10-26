@@ -7,8 +7,10 @@ def send_otp_via_sendgrid(email, otp):
     message = Mail(
         from_email="finsecure7@gmail.com",
         to_emails=email,
-        subject="Your Login OTP",
+        subject="Your OTP Code",
         plain_text_content=f"Your OTP is: {otp}"
     )
     response = sg.send(message)
-    return response
+    print(response.status_code)  # <-- Paste here
+    print(response.body)         # <-- Paste here
+    return response.status_code
