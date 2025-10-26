@@ -126,7 +126,7 @@ def login_view(request):
 
 
 def verify_otp_view(request):
-    print("verify_otp_view called", request.method)  # Debug
+    print("verify_otp_view called", request.method)  # Diagnostic print
 
     if request.method == "POST":
         input_otp = request.POST.get("otp")
@@ -134,10 +134,10 @@ def verify_otp_view(request):
         user_id = request.session.get("user_id")
         otp_expiry = request.session.get("otp_expiry")
 
-        print("OTP Received:", input_otp)  # Debug
-        print("Session OTP:", session_otp)  # Debug
-        print("User ID:", user_id)         # Debug
-        print("OTP expiry:", otp_expiry)   # Debug
+        print("OTP Received:", input_otp)
+        print("Session OTP:", session_otp)
+        print("User ID:", user_id)
+        print("OTP Expiry:", otp_expiry)
 
         if otp_expiry:
             otp_expiry_time = timezone.datetime.fromisoformat(otp_expiry)
@@ -149,30 +149,21 @@ def verify_otp_view(request):
             try:
                 user = User.objects.get(id=user_id)
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                # Call your profile/email check here if needed
-                _check_profile_and_send_email(user)
-
-                # Clear OTP session data only now after login
+                # Call this if profile/email notification needed
+                # _check_profile_and_send_email(user)
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
-
-                print("OTP verified successfully, redirecting")
+                print("OTP verified, redirecting to dashboard")
                 return redirect("dashboard")
-
-            except User.DoesNotExist:
-                messages.error(request, "User not found. Please login again.")
-                return redirect("login")
             except Exception as e:
-                print("Exception during OTP verify:", e)
-                messages.error(request, "Error verifying OTP. Please try again.")
-                return redirect("verify_otp")
+                print("OTP verification error:", e)
+                messages.error(request, "An error occurred. Please login again.")
+                return redirect("login")
 
-        else:
-            messages.error(request, "❌ Invalid OTP. Try again.")
-            return redirect("verify_otp")
+        messages.error(request, "❌ Invalid OTP. Try again.")
+        return redirect("verify_otp")
 
     return render(request, "users/verify_otp.html")
-
 
 # ------------------- Resend OTP -------------------
 def resend_otp_view(request):
