@@ -81,9 +81,10 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # ---------------- Database ----------------
 # Default: use SQLite for local development
 # ---------------- Database ----------------
-import dj_database_url  # ensure imported at top of this section
+# ---------------- Database ----------------
+import dj_database_url
 
-# Default: use SQLite for local development
+# Default to SQLite (local dev)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -91,14 +92,11 @@ DATABASES = {
     }
 }
 
-# Use Neon PostgreSQL on Render (if DATABASE_URL is set)
+# On Render, use PostgreSQL if DATABASE_URL is set
 DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL:
-    DATABASES["default"] = dj_database_url.config(
-        default=DATABASE_URL,
-        conn_max_age=600,
-        ssl_require=True
-    )
+if DATABASE_URL and DATABASE_URL.startswith("postgres"):
+    DATABASES["default"] = dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
+
 
 
 # ---------------- Password Validation ----------------
