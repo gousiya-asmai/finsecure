@@ -128,28 +128,30 @@ def verify_otp_view(request):
         user_id = request.session.get("user_id")
         otp_expiry = request.session.get("otp_expiry")
 
-        if otp_expiry:
-            otp_expiry_time = timezone.datetime.fromisoformat(otp_expiry)
-            if timezone.now() > otp_expiry_time:
-                messages.error(request, "⏳ OTP expired. Please request a new one.")
-                return redirect("login")
+        try:
+            if otp_expiry:
+                otp_expiry_time = timezone.datetime.fromisoformat(otp_expiry)
+                if timezone.now() > otp_expiry_time:
+                    messages.error(request, "⏳ OTP expired. Please request a new one.")
+                    return redirect("login")
 
-        if session_otp and input_otp == session_otp:
-            try:
+            if session_otp and input_otp == session_otp:
                 user = User.objects.get(id=user_id)
-                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                login(request, user, backend="django.contrib.auth.backends.ModelBackend")
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
                 return redirect("dashboard")
-            except Exception as e:
-                logging.error(f"OTP verification error: {e}", exc_info=True)
-                messages.error(request, "An error occurred. Please login again.")
-                return redirect("login")
+            else:
+                messages.error(request, "❌ Invalid OTP. Try again.")
+                return redirect("verify_otp")
 
-        messages.error(request, "❌ Invalid OTP. Try again.")
-        return redirect("verify_otp")
+        except Exception as e:
+            logging.error(f"Error verifying OTP: {e}", exc_info=True)
+            messages.error(request, "An unexpected error occurred. Please login again.")
+            return redirect("login")
 
     return render(request, "users/verify_otp.html")
+
 
 # ------------------- Resend OTP -------------------
 def resend_otp_view(request):
