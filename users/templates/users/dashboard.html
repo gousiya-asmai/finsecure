@@ -578,6 +578,33 @@ document.querySelectorAll(".toggle-collapse").forEach(h=>{
   t.addEventListener("show.bs.collapse",()=>arrow.textContent="▲");
   t.addEventListener("hide.bs.collapse",()=>arrow.textContent="▼");
 });
+
+<!-- Display Django messages -->
+{% if messages %}
+<div class="messages-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="margin-bottom: 10px; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); {% if message.tags == 'warning' %}background-color: #fff3cd; border: 1px solid #ffc107; color: #856404;{% elif message.tags == 'error' %}background-color: #f8d7da; border: 1px solid #f44336; color: #721c24;{% elif message.tags == 'success' %}background-color: #d4edda; border: 1px solid #28a745; color: #155724;{% else %}background-color: #d1ecf1; border: 1px solid #17a2b8; color: #0c5460;{% endif %}">
+        <strong>{{ message.tags|title }}:</strong> {{ message }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="float: right; background: none; border: none; font-size: 1.5rem; line-height: 1; color: inherit; opacity: 0.5; cursor: pointer;">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    // Auto-dismiss messages after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 500);
+        });
+    }, 5000);
+</script>
+{% endif %}
+
 </script>
 {% endblock %}
 
