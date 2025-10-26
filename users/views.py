@@ -20,6 +20,11 @@ from django.shortcuts import render, redirect
 from users.utils import fetch_latest_emails, fetch_recent_transactions, save_transactions_to_db
 from users.sendgrid_utils import send_otp_via_sendgrid
 
+
+from django.conf import settings
+
+
+
 # Utils (Removed gmail_authenticate)
 from users.utils import (
     fetch_latest_emails,
@@ -115,6 +120,7 @@ def login_view(request):
 
     return render(request, "users/login.html")
 # ------------------- OTP Verification -------------------
+
 def verify_otp_view(request):
     if request.method == "POST":
         input_otp = request.POST.get("otp")
@@ -133,7 +139,9 @@ def verify_otp_view(request):
         if session_otp and input_otp == session_otp:
             try:
                 user = User.objects.get(id=user_id)
-                login(request, user)
+                # Specify backend since multiple backends configured 
+                backend = settings.AUTHENTICATION_BACKENDS[0]
+                login(request, user, backend=backend)
                 _check_profile_and_send_email(user)
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
