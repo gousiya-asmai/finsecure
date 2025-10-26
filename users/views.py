@@ -130,18 +130,23 @@ def verify_otp_view(request):
         user_id = request.session.get("user_id")
         otp_expiry = request.session.get("otp_expiry")
 
+        # Debug prints - optionally remove these after debugging
+        print("OTP Received:", input_otp)
+        print("Session OTP:", session_otp)
+
         # Expiry check
         if otp_expiry and timezone.now() > timezone.datetime.fromisoformat(otp_expiry):
             messages.error(request, "⏳ OTP expired. Please request a new one.")
-            return redirect("login")  # Don't clear session here
+            return redirect("login")  # Do not pop/clear session here!
 
         # OTP match
         if session_otp and input_otp == session_otp:
             try:
                 user = User.objects.get(id=user_id)
+                # Use explicit backend since you have multiple configured
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                 _check_profile_and_send_email(user)
-                # ONLY clear session after login is successful and you are about to redirect!
+                # Pop session ONLY after logging in and before redirect
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
                 return redirect("dashboard")
