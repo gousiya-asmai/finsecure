@@ -123,9 +123,10 @@ def login_view(request):
 
 
 
+
+
 def verify_otp_view(request):
-    from django.utils import timezone
-    print("verify_otp_view called", request.method)# To avoid import issues!
+    print("verify_otp_view called", request.method)  # Debug
 
     if request.method == "POST":
         input_otp = request.POST.get("otp")
@@ -133,12 +134,11 @@ def verify_otp_view(request):
         user_id = request.session.get("user_id")
         otp_expiry = request.session.get("otp_expiry")
 
-        print("OTP Received:", input_otp)
-        print("Session OTP:", session_otp)
-        print("User ID in session:", user_id)
-        print("OTP expiry in session:", otp_expiry)
+        print("OTP Received:", input_otp)  # Debug
+        print("Session OTP:", session_otp)  # Debug
+        print("User ID:", user_id)         # Debug
+        print("OTP expiry:", otp_expiry)   # Debug
 
-        # Expiry check
         if otp_expiry:
             otp_expiry_time = timezone.datetime.fromisoformat(otp_expiry)
             if timezone.now() > otp_expiry_time:
@@ -147,28 +147,30 @@ def verify_otp_view(request):
 
         if session_otp and input_otp == session_otp:
             try:
-                from django.contrib.auth import login
-                from django.contrib.auth.models import User
                 user = User.objects.get(id=user_id)
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                try:
-                    _check_profile_and_send_email(user)
-                except Exception as email_ex:
-                    print("Profile check/email error:", email_ex)
+                # Call your profile/email check here if needed
+                _check_profile_and_send_email(user)
+
+                # Clear OTP session data only now after login
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
-                print("OTP verified, redirecting to dashboard")
+
+                print("OTP verified successfully, redirecting")
                 return redirect("dashboard")
+
             except User.DoesNotExist:
                 messages.error(request, "User not found. Please login again.")
                 return redirect("login")
-            except Exception as ex:
-                print("Error during OTP view User lookup or login:", ex)
-                messages.error(request, "Unexpected error occurred.")
-                return redirect("login")
+            except Exception as e:
+                print("Exception during OTP verify:", e)
+                messages.error(request, "Error verifying OTP. Please try again.")
+                return redirect("verify_otp")
+
         else:
             messages.error(request, "❌ Invalid OTP. Try again.")
             return redirect("verify_otp")
+
     return render(request, "users/verify_otp.html")
 
 
