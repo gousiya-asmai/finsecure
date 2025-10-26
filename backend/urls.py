@@ -27,6 +27,8 @@ urlpatterns = [
     path("fraud/", include("fraud.urls")),
     path("transactions/", include("transactions.urls")),
     path("dashboard-data/", transaction_views.dashboard_data, name="dashboard_data"),
+    path("auth/", include("social_django.urls", namespace="social")),
+
 ]
 
 # ✅ Serve media files (profile photos etc.) only in development

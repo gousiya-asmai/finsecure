@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 # Load .env (for local dev)
 load_dotenv()
 
-# Allow OAuth to work without HTTPS in development
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+# Allow OAuth to work without HTTPS in development (should be off in prod!)
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1" if os.getenv("DEBUG", "False").lower() == "true" else "0"
 
 # ---------------- Base Paths ----------------
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,17 +19,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ---------------- Security ----------------
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "change-me")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
-
 ALLOWED_HOSTS = [
     h.strip() for h in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost,finsecure-jgzx.onrender.com").split(",")
 ]
-
-
-# Trust HTTPS requests from Render
 CSRF_TRUSTED_ORIGINS = [
     f"https://{h}" for h in ALLOWED_HOSTS if not h.startswith("127.") and not h.startswith("localhost")
 ]
-
 
 # ---------------- Installed Apps ----------------
 INSTALLED_APPS = [
@@ -39,7 +34,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
+    # 3rd party apps for social auth
+    "social_django",
     # Custom apps
     "users.apps.UsersConfig",
     "assistance",
@@ -61,11 +57,10 @@ MIDDLEWARE = [
 
 # ---------------- URLs & Templates ----------------
 ROOT_URLCONF = "backend.urls"
-
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],   # global templates folder
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -73,6 +68,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",  # social auth
+                "social_django.context_processors.login_redirect",  # social auth
             ],
         },
     },
@@ -81,25 +78,16 @@ TEMPLATES = [
 WSGI_APPLICATION = "backend.wsgi.application"
 
 # ---------------- Database ----------------
-# Default: use SQLite for local development
-# ---------------- Database ----------------
-# ---------------- Database ----------------
 import dj_database_url
-
-# Default to SQLite (local dev)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
-
-# On Render, use PostgreSQL if DATABASE_URL is set
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres"):
     DATABASES["default"] = dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
-
-
 
 # ---------------- Password Validation ----------------
 AUTH_PASSWORD_VALIDATORS = [
@@ -119,7 +107,6 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -139,11 +126,42 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "finsecure7@gmail.com")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
-# ---------------- Google OAuth ----------------
+# ---------------- Google OAuth (social-auth-app-django) ----------------
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 OAUTH_REDIRECT_URI = os.getenv("OAUTH_REDIRECT_URI", "https://finsecure-jgzx.onrender.com/assistance/oauth2callback/")
 
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.google.GoogleOAuth2",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = GOOGLE_CLIENT_ID
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = GOOGLE_CLIENT_SECRET
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    "openid", 
+    "email", 
+    "profile",
+    "https://www.googleapis.com/auth/gmail.readonly",  # for Gmail read access
+]
+SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = ["first_name", "last_name", "email"]
+
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "login"
+
+# Optional: Social Auth Pipeline (customize as needed)
+SOCIAL_AUTH_PIPELINE = (
+    "social_core.pipeline.social_auth.social_details",
+    "social_core.pipeline.social_auth.social_uid",
+    "social_core.pipeline.social_auth.auth_allowed",
+    "social_core.pipeline.social_auth.social_user",
+    "social_core.pipeline.user.get_username",
+    "social_core.pipeline.user.create_user",
+    "social_core.pipeline.social_auth.associate_user",
+    "social_core.pipeline.social_auth.load_extra_data",
+    "social_core.pipeline.user.user_details",
+)
 
 # ---------------- Security (Production) ----------------
 if not DEBUG:

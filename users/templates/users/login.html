@@ -229,5 +229,18 @@ function toggleEmailLogin() {
     emailButton.style.display = "inline-block";
   }
 }
+
+<!-- Google OAuth Login Button -->
+<div class="text-center mb-3">
+  <a href="{% url 'social:begin' 'google-oauth2' %}" 
+     class="btn btn-primary w-100"
+     style="background: #db4437; border: none; margin-bottom: 14px;">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png" 
+         alt="Google" style="height:22px;vertical-align:middle;margin-right:10px;">
+    Sign in with Google
+  </a>
+</div>
+
 </script>
+
 {% endblock %}

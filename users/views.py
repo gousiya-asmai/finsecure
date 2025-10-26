@@ -165,7 +165,7 @@ def resend_otp_view(request):
         send_mail(
             subject="Your Login OTP",
             message=f"Your OTP for login is: {otp}\n\n(Valid for 5 minutes)",
-            from_email="noreply@financesystem.com",
+            from_email="finsecure7@gmail.com",
             recipient_list=[user.email],
             fail_silently=False,
         )
