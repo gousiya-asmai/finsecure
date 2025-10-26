@@ -43,6 +43,8 @@ def home(request):
 
 
 # ------------------- Signup -------------------
+
+# ------------------- Signup -------------------
 def signup_view(request):
     if request.method == "POST":
         username = request.POST.get("username")
@@ -72,7 +74,6 @@ def signup_view(request):
             return redirect("signup")
 
     return render(request, "users/signup.html")
-
 
 # ------------------- Login (Username+Password or Email+OTP) -------------------
 def login_view(request):
@@ -111,7 +112,6 @@ def login_view(request):
                     return redirect("verify_otp")
                 except Exception as e:
                     logging.error(f"OTP email send error: {e}", exc_info=True)
-                    print(f"OTP email send error: {e}")
                     messages.error(request, f"Failed to send OTP: {str(e)}")
                     return redirect("login")
             else:
@@ -119,25 +119,14 @@ def login_view(request):
                 return redirect("login")
 
     return render(request, "users/login.html")
+
 # ------------------- OTP Verification -------------------
-
-
-
-
-
 def verify_otp_view(request):
-    print("verify_otp_view called", request.method)  # Diagnostic print
-
     if request.method == "POST":
         input_otp = request.POST.get("otp")
         session_otp = request.session.get("otp")
         user_id = request.session.get("user_id")
         otp_expiry = request.session.get("otp_expiry")
-
-        print("OTP Received:", input_otp)
-        print("Session OTP:", session_otp)
-        print("User ID:", user_id)
-        print("OTP Expiry:", otp_expiry)
 
         if otp_expiry:
             otp_expiry_time = timezone.datetime.fromisoformat(otp_expiry)
@@ -149,14 +138,11 @@ def verify_otp_view(request):
             try:
                 user = User.objects.get(id=user_id)
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                # Call this if profile/email notification needed
-                # _check_profile_and_send_email(user)
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
-                print("OTP verified, redirecting to dashboard")
                 return redirect("dashboard")
             except Exception as e:
-                print("OTP verification error:", e)
+                logging.error(f"OTP verification error: {e}", exc_info=True)
                 messages.error(request, "An error occurred. Please login again.")
                 return redirect("login")
 
@@ -181,7 +167,7 @@ def resend_otp_view(request):
         send_mail(
             subject="Your Login OTP",
             message=f"Your OTP for login is: {otp}\n\n(Valid for 5 minutes)",
-            from_email="finsecure7@gmail.com",
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
             fail_silently=False,
         )
