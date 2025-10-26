@@ -133,7 +133,7 @@ def verify_otp_view(request):
         # Expiry check
         if otp_expiry and timezone.now() > timezone.datetime.fromisoformat(otp_expiry):
             messages.error(request, "⏳ OTP expired. Please request a new one.")
-            return redirect("login")  # Don't pop session values here!
+            return redirect("login")  # Don't clear session here
 
         # OTP match
         if session_otp and input_otp == session_otp:
@@ -141,7 +141,7 @@ def verify_otp_view(request):
                 user = User.objects.get(id=user_id)
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                 _check_profile_and_send_email(user)
-                # Pop session values only after successful login/just before redirect
+                # ONLY clear session after login is successful and you are about to redirect!
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
                 return redirect("dashboard")
