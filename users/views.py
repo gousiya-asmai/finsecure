@@ -124,39 +124,51 @@ def login_view(request):
 
 
 def verify_otp_view(request):
+    from django.utils import timezone
+    print("verify_otp_view called", request.method)# To avoid import issues!
+
     if request.method == "POST":
         input_otp = request.POST.get("otp")
         session_otp = request.session.get("otp")
         user_id = request.session.get("user_id")
         otp_expiry = request.session.get("otp_expiry")
 
-        # Debug prints - optionally remove these after debugging
         print("OTP Received:", input_otp)
         print("Session OTP:", session_otp)
+        print("User ID in session:", user_id)
+        print("OTP expiry in session:", otp_expiry)
 
         # Expiry check
-        if otp_expiry and timezone.now() > timezone.datetime.fromisoformat(otp_expiry):
-            messages.error(request, "⏳ OTP expired. Please request a new one.")
-            return redirect("login")  # Do not pop/clear session here!
+        if otp_expiry:
+            otp_expiry_time = timezone.datetime.fromisoformat(otp_expiry)
+            if timezone.now() > otp_expiry_time:
+                messages.error(request, "⏳ OTP expired. Please request a new one.")
+                return redirect("login")
 
-        # OTP match
         if session_otp and input_otp == session_otp:
             try:
+                from django.contrib.auth import login
+                from django.contrib.auth.models import User
                 user = User.objects.get(id=user_id)
-                # Use explicit backend since you have multiple configured
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                _check_profile_and_send_email(user)
-                # Pop session ONLY after logging in and before redirect
+                try:
+                    _check_profile_and_send_email(user)
+                except Exception as email_ex:
+                    print("Profile check/email error:", email_ex)
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
+                print("OTP verified, redirecting to dashboard")
                 return redirect("dashboard")
             except User.DoesNotExist:
                 messages.error(request, "User not found. Please login again.")
                 return redirect("login")
+            except Exception as ex:
+                print("Error during OTP view User lookup or login:", ex)
+                messages.error(request, "Unexpected error occurred.")
+                return redirect("login")
         else:
             messages.error(request, "❌ Invalid OTP. Try again.")
             return redirect("verify_otp")
-
     return render(request, "users/verify_otp.html")
 
 
