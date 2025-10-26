@@ -4,7 +4,7 @@ from email.header import decode_header
 import re
 
 USER_EMAIL = "finsecure7@gmail.com"
-APP_PASSWORD = "wgnw gmrv uute hfmc"
+APP_PASSWORD = "ogza uwde pikq mvzr"
 
 CATEGORIES = {
     "Food": ["swiggy", "zomato", "dominos", "pizza", "ubereats"],
