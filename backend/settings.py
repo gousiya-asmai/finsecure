@@ -142,7 +142,8 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 # ---------------- Google OAuth ----------------
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-OAUTH_REDIRECT_URI = os.getenv("OAUTH_REDIRECT_URI", "https://finsecure.onrender.com/assist/auth/callback/")
+OAUTH_REDIRECT_URI = os.getenv("OAUTH_REDIRECT_URI", "https://finsecure-jgzx.onrender.com/assist/auth/callback/")
+
 
 # ---------------- Security (Production) ----------------
 if not DEBUG:
