@@ -161,6 +161,11 @@ body {
   .card-container { padding: 28px 7px 18px 7px; margin-top: 34px;}
   .card-container h3 { font-size: 1.18rem; margin-bottom: 8px;}
 }
+{% extends "base.html" %}
+{% block title %}Login - Finance System{% endblock %}
+{% block content %}
+<style>
+/* [your styles here, unchanged for brevity] */
 </style>
 <div class="navbar-finsecure">
   <div class="navbar-brand">Finance System</div>
@@ -170,9 +175,20 @@ body {
   </div>
 </div>
 
-
 <div class="card-container">
   <h3 class="text-center mb-3">Login</h3>
+
+  <!-- Google OAuth Login Button -->
+  <div class="text-center mb-3">
+    <a href="{% url 'social:begin' 'google-oauth2' %}" 
+       class="btn btn-primary w-100"
+       style="background: #db4437; border: none; margin-bottom: 14px;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png" 
+           alt="Google" style="height:22px;vertical-align:middle;margin-right:10px;">
+      Sign in with Google
+    </a>
+  </div>
+
   {% if messages %}
     {% for message in messages %}
       <div class="alert">{{ message }}</div>
@@ -195,7 +211,7 @@ body {
 
   <!-- Button to show Email OTP Login -->
   <div class="text-center mb-2">
-    <button class="btn btn-link" id="show-email-login" onclick="toggleEmailLogin()">Login with Email OTP</button>
+    <button class="btn btn-link" id="show-email-login" type="button" onclick="toggleEmailLogin()">Login with Email OTP</button>
   </div>
 
   <!-- Email OTP Login - hidden by default -->
@@ -229,18 +245,5 @@ function toggleEmailLogin() {
     emailButton.style.display = "inline-block";
   }
 }
-
-<!-- Google OAuth Login Button -->
-<div class="text-center mb-3">
-  <a href="{% url 'social:begin' 'google-oauth2' %}" 
-     class="btn btn-primary w-100"
-     style="background: #db4437; border: none; margin-bottom: 14px;">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png" 
-         alt="Google" style="height:22px;vertical-align:middle;margin-right:10px;">
-    Sign in with Google
-  </a>
-</div>
-
 </script>
-
 {% endblock %}
