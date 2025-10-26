@@ -55,6 +55,7 @@ body {
   color: #fff;
 }
 
+/* Responsive adjustments */
 @media (max-width:600px) {
   .navbar-finsecure { height: 44px; padding: 0 7px; }
   .navbar-brand { font-size: 1rem; }
@@ -63,10 +64,11 @@ body {
   .verify-title { font-size: 1.18rem; margin-bottom: 9px;}
 }
 
-
+/* Card styling */
 .card-container {
   background: linear-gradient(135deg, #fff8fd 96%, #d7c8ff 100%);
-  max-width: 500px; margin: 80px auto 0 auto;
+  max-width: 500px;
+  margin: 80px auto 0 auto;
   border-radius: 34px;
   box-shadow: 0 10px 48px #bb8afd39, 0 1px 12px #9145d229;
   border: 3px solid #9145d2;
@@ -87,6 +89,8 @@ body {
   color: #6a34a4;
   margin-bottom: 4px;
 }
+
+/* Form styles */
 .form-control {
   border-radius: 1.5em;
   border: 1.8px solid #bb8afd;
@@ -105,6 +109,8 @@ body {
   background: #f2e1fa;
   box-shadow: 0 0 0 2px #bb8afd44;
 }
+
+/* Buttons */
 .btn-primary, .btn-success {
   background: linear-gradient(90deg, #bb8afd 12%, #9145d2 93%);
   color: #fff;
@@ -142,6 +148,8 @@ body {
   color: #bb8afd;
   text-decoration: underline;
 }
+
+/* Alert */
 .alert {
   background: #f7e1fd;
   color: #9145d2;
@@ -161,12 +169,8 @@ body {
   .card-container { padding: 28px 7px 18px 7px; margin-top: 34px;}
   .card-container h3 { font-size: 1.18rem; margin-bottom: 8px;}
 }
-{% extends "base.html" %}
-{% block title %}Login - Finance System{% endblock %}
-{% block content %}
-<style>
-/* [your styles here, unchanged for brevity] */
 </style>
+
 <div class="navbar-finsecure">
   <div class="navbar-brand">Finance System</div>
   <div class="navbar-links">
