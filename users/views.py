@@ -140,8 +140,11 @@ def verify_otp_view(request):
             try:
                 user = User.objects.get(id=user_id)
                 # Specify backend since multiple backends configured 
+                print(settings)
+                print(type(settings))
                 backend = settings.AUTHENTICATION_BACKENDS[0]
                 login(request, user, backend=backend)
+
                 _check_profile_and_send_email(user)
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
