@@ -140,8 +140,8 @@ def verify_otp_view(request):
         if session_otp and input_otp == session_otp:
             try:
                 user = User.objects.get(id=user_id)
-                backend = settings.AUTHENTICATION_BACKENDS[0]  # Use Django settings here
-                login(request, user, backend=backend)          # Pass backend explicitly
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+          # Pass backend explicitly
                 _check_profile_and_send_email(user)
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
