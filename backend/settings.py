@@ -21,13 +21,15 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "change-me")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = [
-    h.strip() for h in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost,finsecure.onrender.com").split(",")
+    h.strip() for h in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost,finsecure-jgzx.onrender.com").split(",")
 ]
+
 
 # Trust HTTPS requests from Render
 CSRF_TRUSTED_ORIGINS = [
     f"https://{h}" for h in ALLOWED_HOSTS if not h.startswith("127.") and not h.startswith("localhost")
 ]
+
 
 # ---------------- Installed Apps ----------------
 INSTALLED_APPS = [
