@@ -4,112 +4,176 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Financial Assistance</title>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         body {
+            margin: 0;
+            min-height: 100vh;
             font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-            background: radial-gradient(ellipse 65% 60% at 57% 70%, #ead5fc 42%, #a480e3 100%);
-            padding-top: 50px;
-            color: #6936a6;
+            background: linear-gradient(120deg, #244b7f 26%, #214672e3 64%, #1a2940 98%);
+            color: #234d83;
+            display: flex;
+            flex-direction: column;
         }
+        
+        /* Top Navbar */
+        .topbar {
+            background: #123660;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.4rem;
+            letter-spacing: .05em;
+            padding: 0 38px;
+            border-bottom: 2px solid #183f6a;
+            box-shadow: 0 2px 16px #113e7524;
+            margin-bottom: 0;
+            width: 100vw; height: 58px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        /* Main card container */
         .card {
-            max-width: 900px;
-            margin: 32px auto;
-            border-radius: 20px;
-            box-shadow: 0px 8px 30px #cda7ff28, 0 1px 9px #b081ff13;
-            padding: 30px 22px 22px 22px;
-            background: linear-gradient(135deg, #f9f4ff 80%, #e3d1fd 100%);
+            max-width: 600px;
+            margin: 60px auto 40px auto;
+            border-radius: 30px;
+            box-shadow: 
+               0 0 0 8px #5e92d1e6,
+               0 0 20px 10px #339dff33,
+               0 4px 30px #193a5e72;
+            padding: 38px 32px 32px 32px;
+            background:  rgb(246, 242, 242);;
+            border: 4px solid #13416a;
         }
+        
         h2, h3 {
-            color: #7a4fff;
+            color: #234d83;
             text-align: center;
             font-weight: 700;
         }
-        h3 {
-            font-size: 1.17em;
-            color: #a480e3;
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 8px;
         }
+        h3 {
+            font-size: 1.15em;
+            color: #3468af;
+            margin-bottom: 24px;
+        }
+        
         .btn-primary {
             width: 100%;
-            padding: 12px;
-            background: linear-gradient(90deg,#965af7 60%,#cda7ff 100%);
+            padding: 13px;
+            background: linear-gradient(90deg, #2762af 60%, #2d7ad4 100%);
             border: none;
             color: #fff;
             font-weight: 700;
-            font-size: 1em;
+            font-size: 1.08em;
             border-radius: 24px;
-            box-shadow: 0 2px 12px #bb8afd22;
+            box-shadow: 0 2px 14px #2966a344;
             transition: background .16s;
+            margin-top: 12px;
         }
         .btn-primary:hover {
-            background: linear-gradient(90deg,#7a4fff 60%,#965af7 100%);
+            background: linear-gradient(90deg, #234d83 60%, #2380e6 100%);
             color: #fff;
         }
+        
         label {
             font-weight: 600;
-            color: #965af7;
+            color: #234d83;
+            margin-bottom: 6px;
+            display: block;
         }
+        
         input, select, textarea {
             border-radius: 11px !important;
-            border: 2px solid #e4d1fb !important;
-            background: #faf7ff !important;
-            color: #4f3973 !important;
+            border: 2px solid #bbdaf3 !important;
+            background: #e7f3ff !important;
+            color: #234d83 !important;
             font-size: 1em !important;
             box-shadow: none !important;
             transition: border-color 0.18s;
+            padding: 10px !important;
         }
         input:focus, select:focus, textarea:focus {
-            border-color: #965af7 !important;
-            box-shadow: 0 0 0 2px #cda7ff32 !important;
+            border-color: #338fff !important;
+            background: #f7faff !important;
+            box-shadow: 0 0 0 2px #b2e5ff48 !important;
         }
+        
         .form-text {
             font-size: 0.93rem;
-            color: #9267c2;
+            color: #4a86c7;
         }
+        
         .text-danger {
             font-size: 0.92rem;
-            color: #c94fc7 !important;
-            margin-top: 2px;
+            color: #d9534f !important;
+            margin-top: 3px;
         }
+        
         .alert-danger {
-            background: #fbefff !important;
-            color: #a132a0 !important;
+            background: #ffebee !important;
+            color: #c62828 !important;
             border-radius: 9px;
-            border: none;
+            border: 1px solid #ef9a9a;
+            padding: 12px;
         }
+        
         .income-box {
-            background: #fff;
-            border: 2px dashed #cda7ff;
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 25px;
+            background: #eaf6ff;
+            border: 2px solid #85caff44;
+            border-radius: 17px;
+            padding: 18px;
+            margin-bottom: 28px;
             text-align: center;
         }
         .income-box h4 {
-            color: #7a4fff;
-            font-weight: 600;
+            color: #234d83;
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-bottom: 8px;
         }
         .income-box p {
-            font-size: 1.4rem;
+            font-size: 1.6rem;
             font-weight: bold;
-            color: #4f3973;
-            margin: 0;
+            color: #2d7ad4;
+            margin: 4px 0;
+        }
+        .income-box small {
+            color: #4a86c7;
+            font-size: 0.88rem;
+        }
+
+        @media (max-width: 600px) {
+            .card {
+                padding: 24px 16px;
+                margin: 40px 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Top Navbar -->
+    <div class="topbar">
+        FinSecure
+    </div>
+
     <div class="container">
         <div class="card">
-            <h2>Welcome to Financial Assistance</h2>
+            <h2>Financial Assistance</h2>
             <h3 class="mb-4">Financial Profile Form</h3>
 
+            <!-- Income Display -->
             <div class="income-box">
                 <h4>Your Monthly Income</h4>
                 <p>₹ {{ income|default:"0.00" }}</p>
-                <small class="text-muted">This value comes from your profile and cannot be edited here.</small>
+                <small>This value comes from your profile and cannot be edited here.</small>
             </div>
 
-            <form method="post" novalidate>
+            <!-- Form -->
+            <form method="post" action="{% url 'assist_home' %}" novalidate>
                 {% csrf_token %}
 
                 {% if form.non_field_errors %}
@@ -138,6 +202,7 @@
         </div>
     </div>
 
+    <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
