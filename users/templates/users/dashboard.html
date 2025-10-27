@@ -3,11 +3,6 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-{% extends "base.html" %}
-{% load static %}
-{% block title %}Dashboard{% endblock %}
-
-{% block content %}
 
 <!-- ADD THIS MESSAGES CODE HERE -->
 {% if messages %}
@@ -37,33 +32,31 @@ setTimeout(() => {
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
 <style>
-...
-
-        .profile-card {
-            background: #fdf9ff;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0px 4px 8px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .profile-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .profile-header img {
-            border-radius: 50%;
-            width: 70px;
-            height: 70px;
-            object-fit: cover;
-            border: 3px solid #ddd;
-        }
-        .profile-details {
-            margin-top: 15px;
-        }
-        .profile-details p {
-            margin: 6px 0;
-        }
+.profile-card {
+    background: #fdf9ff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.profile-header img {
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border: 3px solid #ddd;
+}
+.profile-details {
+    margin-top: 15px;
+}
+.profile-details p {
+    margin: 6px 0;
+}
 body {
   background: linear-gradient(120deg, #ece4fc 15%, #bb8afd 92%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -398,47 +391,46 @@ canvas { max-height: 250px; }
       </div>
     </div>
 
-<!-- Gmail Transactions -->
-<div class="card shadow-sm mt-4">
-  <div class="card-header bg-success text-white">
-    <h5 class="mb-0">💰 Recent Gmail Transactions</h5>
-  </div>
-  <div class="card-body">
-    {% if transactions %}
-      <div class="table-responsive">
-        <table class="table table-striped table-hover gmail-txns align-middle">
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th>Amount</th>
-              <th>Currency</th>
-              <th>Email</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for txn in transactions %}
-              <tr>
-                <td>{{ txn.description }}</td>
-                <td>{{ txn.amount }}</td>
-                <td>{{ txn.currency }}</td>
-                <td>
-                  <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}" 
-                     target="_blank" 
-                     class="btn btn-sm btn-outline-primary">
-                     📧 View Email
-                  </a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <!-- Gmail Transactions -->
+    <div class="card shadow-sm mt-4">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">💰 Recent Gmail Transactions</h5>
       </div>
-    {% else %}
-      <p class="text-muted">No Gmail transactions found.</p>
-    {% endif %}
-  </div>
-</div>
-
+      <div class="card-body">
+        {% if transactions %}
+          <div class="table-responsive">
+            <table class="table table-striped table-hover gmail-txns align-middle">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Currency</th>
+                  <th>Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for txn in transactions %}
+                  <tr>
+                    <td>{{ txn.description }}</td>
+                    <td>{{ txn.amount }}</td>
+                    <td>{{ txn.currency }}</td>
+                    <td>
+                      <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}" 
+                         target="_blank" 
+                         class="btn btn-sm btn-outline-primary">
+                         📧 View Email
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted">No Gmail transactions found.</p>
+        {% endif %}
+      </div>
+    </div>
 
     <!-- Latest Emails -->
     <div class="row gx-3">
@@ -516,9 +508,9 @@ canvas { max-height: 250px; }
     </div>
     <div id="spendingGraphs" class="collapse">
       <div class="row mt-4 mb-2">
-        <div class="col-md-4 mb-2"><h6>Spending (7 Days)</h6><canvas id="spendingChart7d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Spending (30 Days)</h6><canvas id="spendingChart30d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Spending (All Time)</h6><canvas id="spendingChartAll"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Spending (7 Days)</h6>nvas id="spendingChart7rt7d"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Spending (30 Days)</h6>nvas id="spendingingChart30d"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Spending (All Time)</h6>nvas id="sp"spendingChartAll"></canvas></div>
       </div>
     </div>
   </div>
@@ -533,8 +525,8 @@ canvas { max-height: 250px; }
     <div id="fraudAmountGraphs" class="collapse">
       <div class="row mt-4 mb-2">
         <div class="col-md-4 mb-2"><h6>Fraud Amount (7 Days)</h6><canvas id="fraudAmountChart7d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Amount (30 Days)</h6><canvas id="fraudAmountChart30d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Amount (All Time)</h6><canvas id="fraudAmountChartAll"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Fraud Amount (30 Days)</h6>nvasvas id="fraudAmountChart30d"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Fraud Amount (All Time)</h6>nvas id="fraudAmountuntChartAll"></canvas></div>
       </div>
     </div>
   </div>
@@ -548,14 +540,13 @@ canvas { max-height: 250px; }
     </div>
     <div id="fraudCountGraphs" class="collapse">
       <div class="row mt-4 mb-2">
-        <div class="col-md-4 mb-2"><h6>Fraud Count (7 Days)</h6><canvas id="fraudCountChart7d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Count (30 Days)</h6><canvas id="fraudCountChart30d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Count (All Time)</h6><canvas id="fraudCountChartAll"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Fraud Count (7 Days)</h6>nvas id="fraudCountChart7rt7d"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Fraud Count (30 Days)</h6>nvas id="frauraudCountChart30d"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Fraud Count (All Time)</h6>nvas is id="fraudCountChartAll"></canvas></div>
       </div>
     </div>
   </div>
 </div>
-
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -584,7 +575,7 @@ function fetchDashboardData(period="all") {
       if(data.alerts.length){data.alerts.forEach(a=>alertsBox.innerHTML+=`<li>🔔 ${a}</li>`);} else {alertsBox.innerHTML='<li class="text-success">No unusual activity</li>';}
       // Suggestions
       const sugBox=document.getElementById("suggestions"); sugBox.innerHTML="";
-      if(data.suggestions.length){
+      if(data.suggestions && data.suggestions.length){
         data.suggestions.forEach(s=>{
           if(s.includes("⚠️")){sugBox.innerHTML+=`<li class="suggestion-item alert">${s}</li>`;}
           else{sugBox.innerHTML+=`<li class="suggestion-item">💡 ${s}</li>`;}
@@ -612,9 +603,6 @@ document.querySelectorAll(".toggle-collapse").forEach(h=>{
   t.addEventListener("show.bs.collapse",()=>arrow.textContent="▲");
   t.addEventListener("hide.bs.collapse",()=>arrow.textContent="▼");
 });
-
-
-
 </script>
-{% endblock %}
 
+{% endblock %}
