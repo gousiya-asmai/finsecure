@@ -1,143 +1,143 @@
-{% extends "base.html" %}
-{% load static %}
-{% block title %}Home - FinSecure{% endblock %}
-{% block content %}
-<style>
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: linear-gradient(110deg, #ece3fa 10%, #bb8afd 100%);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-.top-navbar {
-  position: fixed;
-  left: 0; top: 0;
-  background: linear-gradient(90deg, #9145d2 65%, #bb8afd 130%);
-  width: 100vw; height: 56px; z-index: 999;
-  display: flex; align-items: center; justify-content: space-between;
-  box-shadow: 0 2px 16px #9145d241; padding: 0 38px;
-}
-.top-navbar .brand { color: #fff; font-size: 1.27rem; font-weight: 700; letter-spacing: 0.06em; }
-.top-navbar .nav-links a { color: #ecd4fe; text-decoration: none; font-weight: 500; margin-left: 32px; font-size: 1.07rem; transition: color .18s;}
-.top-navbar .nav-links a:hover { color: #dd9bff; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Financial Assistance</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            background: radial-gradient(ellipse 65% 60% at 57% 70%, #ead5fc 42%, #a480e3 100%);
+            padding-top: 50px;
+            color: #6936a6;
+        }
+        .card {
+            max-width: 900px;
+            margin: 32px auto;
+            border-radius: 20px;
+            box-shadow: 0px 8px 30px #cda7ff28, 0 1px 9px #b081ff13;
+            padding: 30px 22px 22px 22px;
+            background: linear-gradient(135deg, #f9f4ff 80%, #e3d1fd 100%);
+        }
+        h2, h3 {
+            color: #7a4fff;
+            text-align: center;
+            font-weight: 700;
+        }
+        h3 {
+            font-size: 1.17em;
+            color: #a480e3;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(90deg,#965af7 60%,#cda7ff 100%);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1em;
+            border-radius: 24px;
+            box-shadow: 0 2px 12px #bb8afd22;
+            transition: background .16s;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(90deg,#7a4fff 60%,#965af7 100%);
+            color: #fff;
+        }
+        label {
+            font-weight: 600;
+            color: #965af7;
+        }
+        input, select, textarea {
+            border-radius: 11px !important;
+            border: 2px solid #e4d1fb !important;
+            background: #faf7ff !important;
+            color: #4f3973 !important;
+            font-size: 1em !important;
+            box-shadow: none !important;
+            transition: border-color 0.18s;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #965af7 !important;
+            box-shadow: 0 0 0 2px #cda7ff32 !important;
+        }
+        .form-text {
+            font-size: 0.93rem;
+            color: #9267c2;
+        }
+        .text-danger {
+            font-size: 0.92rem;
+            color: #c94fc7 !important;
+            margin-top: 2px;
+        }
+        .alert-danger {
+            background: #fbefff !important;
+            color: #a132a0 !important;
+            border-radius: 9px;
+            border: none;
+        }
+        .income-box {
+            background: #fff;
+            border: 2px dashed #cda7ff;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .income-box h4 {
+            color: #7a4fff;
+            font-weight: 600;
+        }
+        .income-box p {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #4f3973;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>Welcome to Financial Assistance</h2>
+            <h3 class="mb-4">Financial Profile Form</h3>
 
-.hero-merged-layout {
-  min-height: 100vh;
-  display: flex;
-  align-items: flex-start; /* changed from center to move up */
-  justify-content: flex-start;
-  padding-top: 180px; /* less padding for higher placement */
-  padding-left: 3vw; padding-right: 3vw;
-  background: linear-gradient(112deg, #ece3fa, #bb8afd 100%);
-}
+            <div class="income-box">
+                <h4>Your Monthly Income</h4>
+                <p>₹ {{ income|default:"0.00" }}</p>
+                <small class="text-muted">This value comes from your profile and cannot be edited here.</small>
+            </div>
 
-.login-section {
-  flex: 1 1 0;
-  min-width: 360px;
-  display: flex;
-  align-items: flex-start; /* move up */
-  justify-content: flex-start;
-  margin-top: 0; /* important for high position */
-}
+            <form method="post" novalidate>
+                {% csrf_token %}
 
-.login-register-box {
-  background: linear-gradient(135deg,#fff8fd 95%,#deccfb 99%);
-  border-radius: 38px; box-shadow: 0 10px 54px #bb8afd48;
-  padding: 72px 62px 64px 62px;
-  max-width: 620px; width: 480px;
-  border: 3px solid #9145d2; position: relative; overflow: visible; z-index: 2;
-  margin-top: 0px; /* move card up */
-}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
 
-.box-icon {
-  background: linear-gradient(136deg,#9145d2 44%,#bb8afd 90%);
-  width: 78px; height: 78px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%; position: absolute; left: 50%; top: -39px; transform: translateX(-50%);
-  box-shadow: 0 6px 24px #9145d238, 0 2px 6px #bb8afd38;
-}
-.box-icon svg { width: 40px; height: 40px; fill: #111; } /* black lock icon */
+                {% for field in form %}
+                    <div class="mb-3">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
 
-.finsecure-main { font-weight: 1000; font-size: 3.4rem; color: #9145d2; margin-top: 10px; margin-bottom: 16px;}
-.bold-title { font-weight: 750; font-size: 1.19rem; color: #bc92f3ff; margin-bottom: 18px;}
-.lead { color: #6a34a4; font-size: 1.09rem; margin-bottom: 2.2em; font-weight: 500;}
-.btn-row { display: flex; justify-content: flex-start; margin-top: 2.2em; gap: 22px;}
-.fancy-btn, .fancy-btn-outline { padding: 1.11em 2.95em; font-size: 1.20rem;}
-.fancy-btn { border-radius: 2em; font-weight: 700; border: none; background: linear-gradient(90deg, #bb8afd 19%, #9145d2 81%); color: #fff; box-shadow: 0 5px 23px #bb8afd45; transition: background .18s, box-shadow .18s, color .18s, transform .13s; margin: 0; text-decoration: none; outline: none; display: inline-block; }
-.fancy-btn-outline { background: #fff; color: #6a34a4; border: 2.2px solid #bb8afd; border-radius: 2em; font-weight: 700; transition: background .18s, color .18s, box-shadow .13s; margin: 0; margin-left: 4px; text-decoration: none; outline: none; display: inline-block; }
-.fancy-btn:hover { background: linear-gradient(87deg, #9145d2, #bb8afd 99%); color: #fff; box-shadow: 0 4px 32px #9145d250; transform: translateY(-3px) scale(1.01);}
-.fancy-btn-outline:hover { background: #bb8afd; color: #fff; box-shadow: 0 3px 18px #bb8afd45; }
-
-.images-section.pattern-grid {
-  display: flex; align-items: center; justify-content: flex-end; height: 360px;
-}
-.grid-row {
-  display: flex; gap: 45px; position: relative; width: 390px; height: 340px; align-items: flex-end;
-}
-.grid-block {
-  background: linear-gradient(125deg,#ece3fa 38%,#bb8afd 100%);
-  box-shadow: 0 13px 52px #bb8afd2d, 0 1px 10px #9145d215;
-  border-radius: 20px; padding: 13px; transition: box-shadow .15s, transform .15s;
-  position: absolute;
-}
-.grid-block img {
-  border-radius: 30px;
-  width: 450px; height: 300px; object-fit: cover; box-shadow:0 2px 30px #bb8afd55;
-}
-.grid-block:hover { box-shadow: 0 18px 84px #9145d260; transform: scale(1.09); }
-
-.grid-block:nth-child(1) { left: -150px; top: 20px; z-index: 3; }
-.grid-block:nth-child(2) { left: 200px; top: -150px; z-index: 1;}
-.grid-block:nth-child(3) { left: 200px; top: 280px; z-index: 2;}
-
-@media (max-width:900px){
-  .hero-merged-layout {padding-top: 20px;}
-  .images-section.pattern-grid {height:200px;}
-  .grid-row {width:220px;height:190px;gap:13px;}
-  .grid-block img {width:90px;height:62px;}
-  .grid-block {padding:3px;}
-  .grid-block:nth-child(1) {left:0px;top:64px;}
-  .grid-block:nth-child(2) {left:45px;top:0;}
-  .grid-block:nth-child(3) {left:92px;top:92px;}
-}
-</style>
-<div class="top-navbar">
-  <div class="brand">FinSecure</div>
-  <div class="nav-links">
-    <a href="{% url 'login' %}">Login</a>
-    <a href="{% url 'signup' %}">Register</a>
-  </div>
-</div>
-<div class="hero-merged-layout">
-  <div class="login-section">
-    <div class="login-register-box">
-      <span class="box-icon">
-        <!-- Black lock SVG -->
-        <svg viewBox="0 0 32 32">
-          <circle cx="16" cy="16" r="16" opacity="0.09"/>
-          <rect x="10" y="14" width="12" height="11" rx="2" fill="#111"/>
-          <path d="M16 12a3 3 0 013 3v2h-6v-2a3 3 0 013-3zm0-4a7 7 0 017 7v2a3 3 0 013 3v4a3 3 0 01-3 3H12a3 3 0 01-3-3v-4a3 3 0 013-3v-2a7 7 0 017-7z" fill="none" stroke="#111" stroke-width="2"/>
-        </svg>
-      </span>
-      <div class="finsecure-main">FinSecure</div>
-      <div class="bold-title">Welcome to the<br>Financial Assistance & Fraud Detection System</div>
-      <div class="lead">Manage your finances smartly and stay safe from frauds with real-time alerts.</div>
-      <div class="btn-row">
-        {% if user.is_authenticated %}
-          <a href="{% url 'dashboard' %}" class="fancy-btn">Go to Dashboard</a>
-        {% else %}
-          <a href="{% url 'login' %}" class="fancy-btn">Login</a>
-          <a href="{% url 'signup' %}" class="fancy-btn-outline">Register</a>
-        {% endif %}
-      </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </div>
     </div>
-  </div>
-  <div class="images-section pattern-grid">
-    <div class="grid-row">
-      <div class="grid-block"><img src="{% static 'img/image1.jpg' %}" alt="Increase Value of Wealth"></div>
-      <div class="grid-block"><img src="{% static 'img/image2.jpeg' %}" alt="Fraud Detection"></div>
-      <div class="grid-block"><img src="{% static 'img/image3.jpg' %}" alt="Secure Savings"></div>
-    </div>
-  </div>
-</div>
-{% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
