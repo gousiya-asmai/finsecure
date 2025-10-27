@@ -301,11 +301,11 @@ Thank you for using our system.
             })
 
         # form invalid
-        return render(request, "assistance/home.html", {"form": form, "income": income})
+        return render(request, "users/home.html", {"form": form, "income": income})
 
     # GET request
     form = FinancialProfileForm()
-    return render(request, "assistance/home.html", {"form": form, "income": income})
+    return render(request, "users/home.html", {"form": form, "income": income})
 
 # -------------------------------------------------------------------
 # All Suggestions
