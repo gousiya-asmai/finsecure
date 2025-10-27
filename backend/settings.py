@@ -128,6 +128,7 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "apikey")
 EMAIL_HOST_PASSWORD = os.environ.get("SENDGRID_API_KEY")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "finsecure7@gmail.com")
 
+
 # Email timeout settings (important for production)
 EMAIL_TIMEOUT = 30
 
@@ -229,3 +230,9 @@ LOGGING = {
         },
     },
 }
+# Temporary: Just log emails to console instead of sending
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # For production, use HTTP API or fix SMTP settings
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
