@@ -50,5 +50,7 @@ urlpatterns = [
     path('fraud-alerts/', views.fraud_alerts, name='fraud_alerts'),
     path('reports/', views.reports, name='reports'),
     path('settings/', views.settings, name='settings'),
+    path('test-email/', views.test_email_view, name='test_email'),
+    path('test-messages/', views.test_messages_view, name='test_messages'),
 
 ]

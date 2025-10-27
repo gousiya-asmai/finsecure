@@ -35,7 +35,7 @@ from users.utils import (
 
 # Forms
 from users.forms import UserUpdateForm, ProfileUpdateForm
-
+from django.http import HttpResponse
 
 # ------------------- Home -------------------
 def home(request):
@@ -406,3 +406,41 @@ def _check_profile_and_send_email(user):
             )
     except UserProfile.DoesNotExist:
         pass
+
+
+
+
+@login_required
+def test_email_view(request):
+    """Test email sending functionality"""
+    try:
+        result = send_mail(
+            subject='🧪 Test Email from FinSecure',
+            message='This is a test email to verify your SendGrid configuration is working correctly.',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[request.user.email],  # Send to logged-in user
+            fail_silently=False,
+        )
+        
+        if result == 1:
+            messages.success(request, f'✅ Test email sent successfully to {request.user.email}')
+            return HttpResponse(f"✅ Email sent successfully to {request.user.email}! Check your inbox.")
+        else:
+            messages.error(request, '❌ Email sending failed - no exception but result was 0')
+            return HttpResponse("❌ Email failed to send (result = 0)")
+            
+    except Exception as e:
+        messages.error(request, f'❌ Email error: {str(e)}')
+        return HttpResponse(f"❌ Email sending failed with error: {str(e)}")
+
+
+@login_required
+def test_messages_view(request):
+    """Test Django messages functionality"""
+    messages.success(request, '✅ Success message test!')
+    messages.info(request, 'ℹ️ Info message test!')
+    messages.warning(request, '⚠️ Warning message test!')
+    messages.error(request, '❌ Error message test!')
+    
+    from django.shortcuts import redirect
+    return redirect('dashboard')
