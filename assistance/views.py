@@ -228,7 +228,7 @@ def assist_home(request):
             gmail_suggestions = []
             transactions = []
             try:
-                transactions = fetch_recent_transactions(request.user)  # ✅ pass user object
+                transactions = fetch_recent_transactions(request.user)
                 if transactions:
                     gmail_suggestions = generate_suggestions(profile.__dict__, transactions)
                 else:
@@ -284,7 +284,7 @@ Thank you for using our system.
                     email_message,
                     settings.DEFAULT_FROM_EMAIL,
                     [request.user.email],
-                    fail_silently=False,
+                    fail_silently=True,  # Changed to True to prevent email errors from breaking
                 )
             except Exception as e:
                 print("Email sending error:", e)
@@ -300,12 +300,13 @@ Thank you for using our system.
                 "ml_assistance_required": assistance_required,
             })
 
-        # form invalid
-        return render(request, "assistance/home.html", {"form": form, "income": income})
+        # form invalid - FIX: Use users/home.html
+        return render(request, "users/home.html", {"form": form, "income": income})
 
-    # GET request
+    # GET request - FIX: Use users/home.html
     form = FinancialProfileForm()
-    return render(request, "assistance/home.html", {"form": form, "income": income})
+    return render(request, "users/home.html", {"form": form, "income": income})
+
 
 # -------------------------------------------------------------------
 # All Suggestions
