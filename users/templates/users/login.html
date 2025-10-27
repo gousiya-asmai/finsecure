@@ -2,7 +2,13 @@
 {% block title %}Login - FinSecure{% endblock %}
 {% block content %}
 <style>
-<style>
+/* Reset & global setup */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -10,31 +16,205 @@ body {
   background: linear-gradient(120deg, #244b7f 26%, #214672e3 64%, #1a2940 98%);
   overflow-x: hidden;
 }
-.top-navbar { /* ... unchanged ... */ }
-/* keep your other CSS ... */
-/* Replace your .bg-centered block with the following: */
+
+/* NAVBAR */
+.top-navbar {
+  width: 100%;
+  height: 58px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  background: #173653;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 16px #113e7524;
+  padding: 0 38px;
+}
+
+.top-navbar .brand {
+  color: #fff;
+  font-size: 1.29rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.top-navbar .nav-links {
+  display: flex;
+  gap: 30px;
+}
+
+.top-navbar .nav-links a {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 1.07rem;
+  padding: 5px 14px;
+  border-radius: 7px;
+  transition: background 0.16s, color 0.15s;
+}
+
+.top-navbar .nav-links a:hover {
+  background: #5b99e4;
+  color: #9cbdfb;
+}
+
+/* MAIN CONTAINER */
 .bg-centered {
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
-  margin: 0;
-  padding: 0;
+  padding-top: 60px; /* prevents overlap with fixed navbar */
 }
+
+/* CARD */
 .card-container {
-  /* ... keep your original styles ... */
-  position: relative; /* was 'center', correct to 'relative' */
-  top: 0; left: 0;
-  transform: none;
+  position: relative;
+  background: #f6f2f2;
+  border-radius: 32px;
+  border: 4px solid #13416a;
+  box-shadow: 
+    0 0 0 8px #5e92d1e6,
+    0 0 20px 10px #339dff33,
+    0 4px 30px #193a5e72;
+  max-width: 410px;
+  width: 90%;
+  padding: 42px 36px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
 }
-@media (max-width:700px) {
-  .bg-centered {
-    align-items: flex-start;
-    padding-top: 26px;
+
+.card-container::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  border-radius: 38px;
+  top: -7px; left: -7px; right: -7px; bottom: -7px;
+  border: 2.5px solid #60beff56;
+  box-shadow: 0 0 36px 11px #93cdffc8;
+  opacity: 0.9;
+  z-index: 1;
+}
+
+.card-container h3 {
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: #235a80;
+  margin-bottom: 30px;
+  text-align: center;
+  letter-spacing: 0.03em;
+  z-index: 2;
+}
+
+/* FORM */
+.card-container label {
+  font-weight: 600;
+  color: #20557b;
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+}
+
+.form-control {
+  border-radius: 11px;
+  border: 1.8px solid #296298;
+  padding: 13px 14px;
+  font-size: 1.09rem;
+  width: 100%;
+  background: #eef6fc;
+  color: #24618e;
+  margin-bottom: 7px;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.13s;
+}
+
+.form-control:focus {
+  border-color: #2da6fc;
+  background: #e5f2ff;
+  box-shadow: 0 0 0 2px #60beffc7;
+}
+
+/* BUTTONS */
+.btn-primary, .btn-success {
+  background: linear-gradient(90deg, #226ea0 16%, #2566a9 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.17rem;
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 3px 23px #4cc2f830;
+  margin-top: 24px;
+  margin-bottom: 11px;
+  padding: 14px 0;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-primary:hover, .btn-success:hover {
+  background: linear-gradient(92deg, #2566a9 16%, #1d699b 100%);
+  box-shadow: 0 8px 38px #7bd7fc38;
+  transform: scale(1.03);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #24628b;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.13s;
+}
+
+.btn-link:hover {
+  color: #3c8bcf;
+}
+
+/* ALERT */
+.alert {
+  color: #286e9c;
+  border-radius: 12px;
+  padding: 7px 14px;
+  margin: 11px 0 6.5px;
+  font-weight: 700;
+  font-size: 0.99rem;
+  box-shadow: 0 1px 11px #38a2ff12;
+  text-align: center;
+}
+
+/* UTILITIES */
+.text-center { text-align: center; }
+.mb-3 { margin-bottom: 20px; }
+.mt-3 { margin-top: 17px; }
+.mb-2 { margin-bottom: 12px; }
+
+.card-container a {
+  color: #226490;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.card-container a:hover {
+  color: #64aafd;
+}
+
+/* RESPONSIVE */
+@media (max-width: 700px) {
+  .card-container {
+    padding: 25px 5vw 20px;
+    margin-top: 40px;
   }
-  .card-container { margin-top:24px; }
+  .card-container h3 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+  }
 }
 </style>
 
@@ -54,39 +234,39 @@ body {
         <div class="alert">{{ message }}</div>
       {% endfor %}
     {% endif %}
-    <!-- Username/Password Login - always visible -->
     <form method="POST" id="password-login-form">
       {% csrf_token %}
       <div class="mb-3">
         <label for="username" class="form-label">Username</label>
-        <input type="text" name="username" class="form-control" placeholder="Enter your username">
+        <input type="text" name="username" class="form-control" placeholder="Enter your username" required>
       </div>
       <div class="mb-3">
         <label for="password" class="form-label">Password</label>
-        <input type="password" name="password" class="form-control" placeholder="Enter your password">
+        <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
       </div>
-      <button type="submit" name="login_password" class="btn btn-primary w-100 mb-2">Login with Password</button>
+      <button type="submit" name="login_password" class="btn btn-primary">Login with Password</button>
     </form>
 
-    <!-- Button to show Email OTP Login -->
     <div class="text-center mb-2">
       <button class="btn btn-link" id="show-email-login" onclick="toggleEmailLogin()">Login with Email OTP</button>
     </div>
-    <!-- Email OTP Login - hidden by default -->
+
     <form method="POST" id="email-login-form" style="display: none;">
       {% csrf_token %}
       <div class="mb-3">
         <label for="email" class="form-label">Email</label>
-        <input type="email" name="email" class="form-control" placeholder="Enter your registered email">
+        <input type="email" name="email" class="form-control" placeholder="Enter your registered email" required>
       </div>
-      <button type="submit" name="login_otp" class="btn btn-success w-100">Send OTP</button>
-      <button type="button" class="btn btn-link w-100 mt-2" onclick="toggleEmailLogin()">Back to Password Login</button>
+      <button type="submit" name="login_otp" class="btn btn-success">Send OTP</button>
+      <button type="button" class="btn btn-link mt-2" onclick="toggleEmailLogin()">Back to Password Login</button>
     </form>
+
     <p class="text-center mt-3">
       Don’t have an account? <a href="{% url 'signup' %}">Register</a>
     </p>
   </div>
 </div>
+
 <script>
 function toggleEmailLogin() {
   var emailForm = document.getElementById('email-login-form');
