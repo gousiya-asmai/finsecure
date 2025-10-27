@@ -39,7 +39,7 @@ from django.http import HttpResponse
 
 # ------------------- Home -------------------
 def home(request):
-    return render(request, "users/home.html")
+    return render(request, "assistance/home.html")
 
 
 # ------------------- Signup -------------------
