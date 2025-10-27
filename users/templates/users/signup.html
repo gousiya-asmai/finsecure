@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block title %}Register - FinSecure{% endblock %}
 
 {% block content %}
@@ -12,6 +11,7 @@ body {
   overflow-x: hidden;
 }
 
+/* -------- Navbar -------- */
 .top-navbar {
   position: fixed;
   left: 0; top: 0;
@@ -40,12 +40,16 @@ body {
   color: #8bd8ff;
 }
 
+/* -------- Centered Background Section -------- */
 .bg-centered {
-  min-height: 90vh; width: 90vw;
+  min-height: calc(100vh - 56px); /* perfectly centers below navbar */
+  width: 100%;
   display: flex; align-items: center; justify-content: center;
   background: none;
+  box-sizing: border-box;
 }
 
+/* -------- Card Container -------- */
 .card-container {
   background: rgb(246, 242, 242);
   border-radius: 32px;
@@ -60,11 +64,10 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: center;
   border: 4px solid #13416a;
-  /* Glow effect */
   outline: 0;
   box-shadow: 0 0 0 8px #38a2ff33, 0 0 50px 12px #2097ea34;
+  position: relative;
 }
 .card-container::before {
   content: "";
@@ -72,9 +75,10 @@ body {
   position: absolute; border-radius: 34px;
   top: -8px; left: -8px; right: -8px; bottom: -8px;
   border: 2.5px solid #60beff56;
-  
   opacity: .9; z-index: 1;
 }
+
+/* -------- Typography -------- */
 .card-container h3 {
   font-size: 2rem;
   font-weight: 800;
@@ -89,6 +93,8 @@ body {
   margin-bottom: 7px;
   font-size: 1.05rem;
 }
+
+/* -------- Form Controls -------- */
 .form-control {
   border-radius: 10px;
   border: 1.25px solid #1d5991;
@@ -106,6 +112,8 @@ body {
   background: #e5f2ff;
   box-shadow: 0 0 0 2px #60beffc7;
 }
+
+/* -------- Button -------- */
 .btn-primary {
   background: linear-gradient(90deg, #226ea0 16%, #2566a9 100%);
   color: #fff;
@@ -126,6 +134,8 @@ body {
   box-shadow: 0 8px 25px #397fb937;
   transform: scale(1.03);
 }
+
+/* -------- Alerts -------- */
 .alert {
   background: #15395e;
   color: #377faf;
@@ -137,16 +147,21 @@ body {
   box-shadow: 0 1px 14px #7adfff18;
   text-align: center;
 }
+
+/* -------- Utilities -------- */
 .text-center { text-align: center; }
 .mb-3 { margin-bottom: 20px; }
 .mt-3 { margin-top: 15px; }
 .card-container a { color: #2a6b9a; text-decoration: underline; font-weight: 600; }
 .card-container a:hover { color: #64aafd; }
+
+/* -------- Responsive -------- */
 @media (max-width:700px) {
-  .card-container { padding: 17px 7vw 13px 7vw; margin-top:30px;}
-  .card-container h3 { font-size: 1.15rem; margin-bottom: 7px;}
+  .card-container { padding: 17px 7vw 13px 7vw; margin-top: 20px;}
+  .card-container h3 { font-size: 1.4rem; margin-bottom: 10px;}
 }
 </style>
+
 <div class="top-navbar">
   <div class="brand">FinSecure</div>
   <div class="nav-links">
@@ -154,14 +169,17 @@ body {
     <a href="{% url 'signup' %}">Register</a>
   </div>
 </div>
+
 <div class="bg-centered">
   <div class="card-container">
     <h3 class="text-center mb-3">Create an Account</h3>
+
     {% if messages %}
       {% for message in messages %}
         <div class="alert">{{ message }}</div>
       {% endfor %}
     {% endif %}
+
     <form method="POST">
       {% csrf_token %}
       <div class="mb-3">
@@ -180,8 +198,10 @@ body {
         <label for="password2" class="form-label">Confirm Password</label>
         <input type="password" name="password2" class="form-control" required>
       </div>
+
       <button type="submit" class="btn btn-primary w-100">Register</button>
     </form>
+
     <p class="text-center mt-3">
       Already have an account? <a href="{% url 'login' %}">Login</a>
     </p>

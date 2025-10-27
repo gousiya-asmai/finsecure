@@ -1,177 +1,261 @@
 {% extends "base.html" %}
-{% block title %}Verify OTP - Finance System{% endblock %}
+{% block title %}Verify OTP - FinSecure{% endblock %}
 
 {% block content %}
 <style>
+/* ===== Base Page Style ===== */
 body {
   min-height: 100vh;
-  background: linear-gradient(120deg, #ece4fc 15%, #bb8afd 92%);
+  background: linear-gradient(120deg, #29486b 30%, #22416a 100%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Navbar styling - Purple Gradient */
-.navbar-finsecure {
-  width: 100%;
-  background: linear-gradient(90deg, #8231b8ff 57%, #bb8afd 100%);
-  color: #fff;
-  padding: 0 24px;
-  height: 58px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* ===== Navbar ===== */
+.top-navbar {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 10;
-  box-shadow: 0 2px 16px #bb8afd24;
-  border-bottom: 2px solid #ba8bfd44;
-}
-
-.navbar-brand {
-  font-size: 1.23rem;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 1px;
-  text-decoration: none;
-}
-
-.navbar-links {
+  width: 100%;
+  height: 56px;
+  background: #173653;
   display: flex;
   align-items: center;
-  gap: 22px;
+  justify-content: space-between;
+  padding: 0 38px;
+  box-shadow: 0 2px 14px #113e7524;
+  z-index: 999;
 }
 
-.navbar-links a {
+.top-navbar .brand {
   color: #fff;
-  font-weight: 600;
+  font-size: 1.27rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.top-navbar .nav-links {
+  display: flex;
+  gap: 27px;
+}
+
+.top-navbar .nav-links a {
+  color: #fff;
   text-decoration: none;
-  font-size: 1.05rem;
-  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 1.09rem;
+  padding: 5px 14px;
   border-radius: 7px;
-  transition: background 0.13s;
-}
-.navbar-links a:hover {
-  background: #8936d0;;
-  color: #fff;
+  transition: background .14s, color .14s;
 }
 
-@media (max-width:600px) {
-  .navbar-finsecure { height: 44px; padding: 0 7px; }
-  .navbar-brand { font-size: 1rem; }
-  .navbar-links a { font-size: 0.95rem; padding: 7px 10px; }
-  .card-verify-otp { padding: 20px 7px 17px 7px; margin-top: 25px;}
-  .verify-title { font-size: 1.18rem; margin-bottom: 9px;}
+.top-navbar .nav-links a:hover {
+  background: #1b314e;
+  color: #8bd8ff;
 }
 
-/* OTP Verify Card Styles */
+/* ===== Background Center ===== */
+.bg-centered {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 56px; /* offset for navbar */
+}
+
+/* ===== OTP Card ===== */
 .card-verify-otp {
-  max-width: 440px;
-  margin: 82px auto 0 auto; /* Padding for fixed navbar */
-  background: linear-gradient(135deg, #fff7ff 92%, #e4d1fb 100%);
+  max-width: 420px;
+  width: 90%;
+  background: #fff;
   border-radius: 28px;
-  box-shadow: 0 10px 46px 0 #ba8bfd35, 0 1px 11px 0 #7a4fff18;
-  border: 2.5px solid #bb8afd;
-  padding: 42px 36px 34px 36px;
+  border: 3px solid #13416a;
+  box-shadow: 0 0 0 7px #92d6ff46, 0 0 38px 10px #78bfff21;
+  padding: 44px 32px 36px 32px;
   position: relative;
+  text-align: center;
 }
+
+/* Glowing Outer Border */
+.card-verify-otp::before {
+  content: "";
+  position: absolute;
+  border-radius: 32px;
+  top: -8px; left: -8px; right: -8px; bottom: -8px;
+  border: 2.5px solid #53baff46;
+  opacity: 0.8;
+  z-index: 1;
+}
+
+/* ===== Icon Badge ===== */
 .otp-icon-badge {
   position: absolute;
-  left: 50%; top: 0;
+  left: 50%;
+  top: 0;
   transform: translateX(-50%) translateY(-50%);
-  background: linear-gradient(135deg, #8d5bfa 56%, #7a4fff 100%);
-  width: 54px; height: 54px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 16px rgba(120,76,200,0.18);
-  color: #fff; font-size: 2rem;
-  border: 4px solid #f5f2fc; z-index: 3;
-}
-.verify-title {
-  margin-top: 32px; margin-bottom: 16px;
-  text-align: center; font-size: 2.01rem; font-weight: 800; color: #7a4fff;
-  letter-spacing: 0.01em;
-}
-.verify-desc {
-  text-align: center; font-size: 1.09rem; color: #653ad6; margin-bottom: 32px;
-}
-.custom-alert {
-  background: #fdefff; color: #a246c1; border: 1.2px solid #eac6fc;
-  border-radius: 10px; padding: 10px 13px; margin-bottom: 16px; text-align: center;
-}
-.form-label {
-  color: #7a4fff; font-weight: 600; margin-bottom: 7px;
-}
-.form-control {
-  border-radius: 13px; border: 1.6px solid #eadfff; background: #f8f2fe;
-  font-size: 1.01rem; padding: 10px 13px; margin-bottom: 19px;
-  color: #703ea4;
-  transition: border-color 0.14s, box-shadow 0.16s;
-}
-.form-control:focus {
-  border-color: #7a4fff; box-shadow: 0 0 0 2px #bb8afd34; background: #f6edfc; outline: none;
-}
-.btn-verify {
-  width: 100%; border-radius: 12px;
-  background: linear-gradient(98deg, #7a4fff 65%, #bb8afd 105%);
-  color: #fff; font-weight: 700; border: none; font-size: 1.13rem; padding: 11px 0;
-  margin-top: 10px;
-  box-shadow: 0 3px 18px #a47bfa22;
-  transition: background 0.14s, box-shadow 0.16s;
-}
-.btn-verify:hover {
-  background: linear-gradient(90deg, #653ad6 85%, #bb8afd 100%);
-  box-shadow: 0 8px 32px #7a4fff1c;
+  background: linear-gradient(135deg, #469efc 44%, #70c9fd 100%);
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 16px #469efc30;
   color: #fff;
+  font-size: 2rem;
+  border: 4px solid #e1f5fc;
+  z-index: 2;
 }
+
+/* ===== Text Elements ===== */
+.verify-title {
+  margin-top: 34px;
+  margin-bottom: 17px;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #225488;
+}
+
+.verify-desc {
+  font-size: 1.1rem;
+  color: #2156ad;
+  margin-bottom: 28px;
+}
+
+/* ===== Alert Box ===== */
+.custom-alert {
+  background: #ebf3fe;
+  color: #183f69;
+  border: 1.2px solid #beecff;
+  border-radius: 9px;
+  padding: 11px 13px;
+  margin-bottom: 15px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* ===== Form Elements ===== */
+.form-label {
+  color: #143f6d;
+  font-weight: 600;
+  margin-bottom: 7px;
+  text-align: left;
+  display: block;
+}
+
+.form-control {
+  border-radius: 10px;
+  border: 1.5px solid #bee3ff;
+  background: #f3faff;
+  font-size: 1.05rem;
+  padding: 11px 13px;
+  margin-bottom: 17px;
+  color: #235250;
+  transition: border-color 0.13s, box-shadow 0.14s;
+  width: 100%;
+}
+
+.form-control:focus {
+  border-color: #2388f7;
+  box-shadow: 0 0 0 2px #97cffc54;
+  background: #e6f4ff;
+  outline: none;
+}
+
+/* ===== Button ===== */
+.btn-verify {
+  width: 100%;
+  border-radius: 11px;
+  background: linear-gradient(98deg, #226ea0 16%, #2566a9 100%);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  font-size: 1.13rem;
+  padding: 12px 0;
+  margin-top: 10px;
+  box-shadow: 0 3px 16px #458cf63d;
+  transition: background 0.13s, box-shadow 0.13s;
+}
+
+.btn-verify:hover {
+  background: linear-gradient(90deg, #2566a9 16%, #1d699b 100%);
+  box-shadow: 0 6px 24px #469efc2c;
+}
+
+/* ===== Resend Link ===== */
 .resend-link {
-  color: #7a4fff; text-decoration: underline; font-weight: 600; transition: color 0.16s;
+  color: #1d4f84;
+  text-decoration: underline;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: color 0.15s;
 }
+
 .resend-link:hover {
-  color: #653ad6; text-decoration: none;
+  color: #1677c9;
+  text-decoration: none;
 }
+
 .text-center { text-align: center; }
 .mt-3 { margin-top: 16px; }
+
+/* ===== Responsive Adjustments ===== */
+@media (max-width:600px) {
+  .card-verify-otp {
+    padding: 24px 18px 20px 18px;
+    margin-top: 35px;
+  }
+  .verify-title {
+    font-size: 1.4rem;
+  }
+}
 </style>
 
-<!-- Navbar HTML - Replace Your Base Navbar With This -->
-<div class="navbar-finsecure">
-  <div class="navbar-brand">Finance System</div>
-  <div class="navbar-links">
-    <a href="{% url 'dashboard' %}">Dashboard</a>
-    <a href="{% url 'logout' %}">Logout</a>
+<!-- ===== HTML Structure ===== -->
+<div class="top-navbar">
+  <div class="brand">FinSecure</div>
+  <div class="nav-links">
+    <a href="{% url 'login' %}">Login</a>
+    <a href="{% url 'signup' %}">Register</a>
   </div>
 </div>
 
-<div class="card-verify-otp">
-  <div class="otp-icon-badge">
-    <svg width="28" height="28" viewBox="0 0 20 20" fill="none">
-      <path d="M6 9V6a4 4 0 1 1 8 0v3" stroke="white" stroke-width="2" stroke-linecap="round"/>
-      <rect x="3.5" y="9" width="13" height="8" rx="2.5" stroke="white" stroke-width="2"/>
-      <circle cx="10" cy="13" r="1.2" fill="white"/>
-    </svg>
-  </div>
-  <div class="verify-title">Verify OTP</div>
-  {% if messages %}
-    {% for message in messages %}
-      <div class="custom-alert">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
-  <div class="verify-desc">
-    An OTP has been sent to your registered email.<br>
-    Please enter it below to verify your account.
-  </div>
-  <form method="POST" autocomplete="off">
-  {% csrf_token %}
-  <div>
-    <label for="otp" class="form-label">OTP</label>
-    <input type="text" name="otp" id="otp" class="form-control" required maxlength="6" placeholder="Enter OTP">
-  </div>
-  <button type="submit" class="btn-verify">Verify OTP</button>
-</form>
+<div class="bg-centered">
+  <div class="card-verify-otp">
+    <div class="otp-icon-badge">
+      <svg width="28" height="28" viewBox="0 0 20 20" fill="none">
+        <path d="M6 9V6a4 4 0 1 1 8 0v3" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <rect x="3.5" y="9" width="13" height="8" rx="2.5" stroke="white" stroke-width="2"/>
+        <circle cx="10" cy="13" r="1.2" fill="white"/>
+      </svg>
+    </div>
 
-  <p class="text-center mt-3" style="font-size: 1rem;">
-    Didn't receive the OTP?
-    <a href="{% url 'resend_otp' %}" class="resend-link">Resend OTP</a>
-  </p>
+    <div class="verify-title">Verify OTP</div>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="custom-alert">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="verify-desc">
+      An OTP has been sent to your registered email.<br>
+      Please enter it below to verify your account.
+    </div>
+
+    <form method="POST" autocomplete="off">
+      {% csrf_token %}
+      <label for="otp" class="form-label">OTP</label>
+      <input type="text" name="otp" id="otp" class="form-control" required maxlength="6" placeholder="Enter OTP">
+      <button type="submit" class="btn-verify">Verify OTP</button>
+    </form>
+
+    <p class="text-center mt-3" style="font-size: 1rem;">
+      Didn't receive the OTP?
+      <a href="{% url 'resend_otp' %}" class="resend-link">Resend OTP</a>
+    </p>
+  </div>
 </div>
 {% endblock %}
