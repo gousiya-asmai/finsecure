@@ -2,6 +2,7 @@
 {% block title %}Login - FinSecure{% endblock %}
 {% block content %}
 <style>
+<style>
 body {
   margin: 0;
   min-height: 100vh;
@@ -9,174 +10,31 @@ body {
   background: linear-gradient(120deg, #244b7f 26%, #214672e3 64%, #1a2940 98%);
   overflow-x: hidden;
 }
-
-.top-navbar {
-  width: 100vw; height: 58px;
-  position: fixed; left: 0; top: 0; z-index: 10;
-  background: #173653;
-  display: flex; align-items: center; justify-content: space-between;
-  box-shadow: 0 2px 16px #113e7524;
-  padding: 0 38px;
-}
-.top-navbar .brand {
-  color: #fff;
-  font-size: 1.29rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  margin-top: 0;
-}
-.top-navbar .nav-links {
-  display: flex;
-  gap: 30px;
-}
-.top-navbar .nav-links a {
-  color: #fff;
-  font-weight: 600;
-  text-decoration: none;
-  font-size: 1.07rem;
-  padding: 5px 14px;
-  border-radius: 7px;
-  transition: background .16s, color .15s;
-}
-.top-navbar .nav-links a:hover {
-  background: #5b99e4;
-  color: #9cbdfb;
-}
-
-/* Center layout for container */
+.top-navbar { /* ... unchanged ... */ }
+/* keep your other CSS ... */
+/* Replace your .bg-centered block with the following: */
 .bg-centered {
-  min-height: 90vh;
-  width: 90vw;
-  display: flex; align-items: center; justify-content: center;
-  background: none;
-}
-
-.card-container {
-  background: rgb(246, 242, 242);
-  border-radius: 32px;
-  box-shadow:
-    0 0 0 8px #5e92d1e6,
-    0 0 20px 10px #339dff33,
-    0 4px 30px #193a5e72;
-  max-width: 410px;
-  width: 95vw;
-  margin: 0 auto;
-  padding: 42px 36px 32px 36px;
+  min-height: 100vh;
+  width: 100vw;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  position: center;
-  border: 4px solid #13416a;
-  /* Glow effect */
-  outline: 0;
-  box-shadow: 0 0 0 8px #38a2ff33, 0 0 50px 12px #2097ea34;
-}
-
-.card-container h3 {
-  font-size: 2.1rem;
-  font-weight: 800;
-  color: #235a80;
-  margin-bottom: 30px;
-  text-align: center;
-  letter-spacing: 0.03em;
-}
-
-.card-container label {
-  font-weight: 600;
-  color: #20557b;
-  margin-bottom: 8px;
-  font-size: 1.05rem;
-  letter-spacing: 0.01em;
-}
-
-.form-control {
-  border-radius: 11px;
-  border: 1.8px solid #296298;
-  padding: 13px 14px;
-  font-size: 1.09rem;
-  width: 100%;
-  background: #eef6fc;
-  color: #24618e;
-  margin-bottom: 7px;
-  outline: none;
-  transition: border-color 0.12s, box-shadow 0.13s;
-}
-.form-control:focus {
-  border-color:  #2da6fc;
-  background: #e5f2ff;
-  box-shadow: 0 0 0 2px #60beffc7;
-}
-
-.btn-primary, .btn-success {
-  background: linear-gradient(90deg, #226ea0 16%, #2566a9 100%);
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.17rem;
-  border: none;
-  border-radius: 15px;
-  box-shadow: 0 3px 23px #4cc2f830;
-  margin-top: 24px;
-  margin-bottom: 11px;
-  padding: 14px 0;
-  width: 100%;
-  cursor: pointer;
-  transition: background 0.11s, box-shadow 0.11s, transform 0.11s;
-}
-.btn-primary:hover, .btn-success:hover {
-  background: linear-gradient(92deg, #2566a9 16%, #1d699b 100%);
-  box-shadow: 0 8px 38px #7bd7fc38;
-  transform: scale(1.03);
-}
-.btn-link {
+  justify-content: center;
   background: none;
-  border: none;
-  color: #24628b;
-  font-weight: 600;
-  font-size: 1rem;
-  text-decoration: underline;
-  box-shadow: none;
+  margin: 0;
   padding: 0;
-  cursor: pointer;
-  transition: color 0.13s;
 }
-.btn-link:hover {
-  color: #3c8bcf;
-  text-decoration: underline;
+.card-container {
+  /* ... keep your original styles ... */
+  position: relative; /* was 'center', correct to 'relative' */
+  top: 0; left: 0;
+  transform: none;
 }
-.alert {
-  
-  color: #286e9c;
-  border-radius: 12px;
-  padding: 7px 14px;
-  margin: 11px 0 6.5px 0;
-  font-weight: 700;
-  font-size: .99rem;
-  box-shadow: 0 1px 11px #38a2ff12;
-  text-align: center;
-}
-
-.text-center { text-align: center; }
-.mb-3 { margin-bottom: 20px; }
-.mt-3 { margin-top: 17px; }
-.mb-2 { margin-bottom: 12px; }
-.card-container a { color: #226490; text-decoration: underline; font-weight: 600; }
-.card-container a:hover { color:#64aafd; }
 @media (max-width:700px) {
-  .card-container { padding:15px 5vw 12px 5vw; margin-top:24px;}
-  .card-container h3 { font-size: 1.19rem; margin-bottom: 12px;}
-}
-
-/* shine border effect */
-.card-container::before {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  border-radius: 38px;
-  top: -7px; left: -7px; right: -7px; bottom: -7px;
-  border: 2.5px solid #60beff56;
-  box-shadow: 0 0 36px 11px #93cdffc8;
-  opacity: .9;
-  z-index: 1;
+  .bg-centered {
+    align-items: flex-start;
+    padding-top: 26px;
+  }
+  .card-container { margin-top:24px; }
 }
 </style>
 
@@ -214,7 +72,6 @@ body {
     <div class="text-center mb-2">
       <button class="btn btn-link" id="show-email-login" onclick="toggleEmailLogin()">Login with Email OTP</button>
     </div>
-
     <!-- Email OTP Login - hidden by default -->
     <form method="POST" id="email-login-form" style="display: none;">
       {% csrf_token %}
