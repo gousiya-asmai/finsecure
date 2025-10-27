@@ -5,7 +5,6 @@ from django.contrib.auth import views as auth_views
 from . import views
 from assistance import views as assistance_views
 
-
 urlpatterns = [
     # --- Home ---
     path("", views.home, name="home"),
@@ -17,19 +16,31 @@ urlpatterns = [
     path("resend_otp/", views.resend_otp_view, name="resend_otp"),
     path("logout/", views.logout_view, name="logout"),
 
-    # --- Dashboard ---
-    path("dashboard/", views.dashboard_view, name="dashboard"),
+    # --- Dashboard & Profile ---
+    # Use either users.dashboard_view or assistance.dashboard — not both
+    # If your dashboard belongs to assistance app, keep the line below:
+    path("dashboard/", assistance_views.dashboard, name="dashboard"),
+    
+    # If dashboard belongs to users app instead, use:
+    # path("dashboard/", views.dashboard_view, name="dashboard"),
+
     path("profile/", views.profile_view, name="profile"),
+
+    # --- Assistance & Fraud Detection ---
     path("assistance/", views.assistance_view, name="assistance"),
     path("fraud_check/", views.fraud_check_view, name="fraud_check"),
+    path("dashboard-data/", views.get_dashboard_data, name="get_dashboard_data"),
+    path("fraud-alerts/", views.fraud_alerts, name="fraud_alerts"),
+
+    # --- Reports, Settings & Email ---
+    path("reports/", views.reports, name="reports"),
+    path("settings/", views.settings, name="settings"),
+    path("update_email/", views.update_email_view, name="update_email"),
 
     # --- Gmail Integration ---
     path("connect_gmail/", views.connect_gmail, name="connect_gmail"),
 
-    # --- Email update ---
-    path("update_email/", views.update_email_view, name="update_email"),
-
-    # --- Password change ---
+    # --- Password Change ---
     path(
         "password_change/",
         auth_views.PasswordChangeView.as_view(
@@ -44,13 +55,8 @@ urlpatterns = [
         ),
         name="password_change_done",
     ),
-     path("dashboard/", assistance_views.dashboard, name="dashboard"),
-    path("dashboard-data/", views.get_dashboard_data, name="get_dashboard_data"),
-    # In users/urls.py or assistance/urls.py (depending on your structure)
-    path('fraud-alerts/', views.fraud_alerts, name='fraud_alerts'),
-    path('reports/', views.reports, name='reports'),
-    path('settings/', views.settings, name='settings'),
-    path('test-email/', views.test_email_view, name='test_email'),
-    path('test-messages/', views.test_messages_view, name='test_messages'),
 
+    # --- Testing Utilities (Optional) ---
+    path("test-email/", views.test_email_view, name="test_email"),
+    path("test-messages/", views.test_messages_view, name="test_messages"),
 ]
