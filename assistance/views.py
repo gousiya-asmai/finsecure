@@ -314,6 +314,13 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.contrib import messages
 
+from .forms import FinancialProfileForm
+from .models import FinancialProfile, AssistanceResult, SmartSuggestion
+from users.models import UserProfile
+from users.utils import fetch_recent_transactions, generate_suggestions
+from assistance.utils import predict_assistance, generate_recommendations
+from assistance.assistance_utils import send_assistance_email_async
+
 logger = logging.getLogger(__name__)
 
 def send_assistance_email(subject, message, to_email):
@@ -338,7 +345,7 @@ def assist_home(request):
     if request.method == "POST":
         form = FinancialProfileForm(request.POST)
         if form.is_valid():
-            profile, created = FinancialProfile.objects.get_or_create(user=request.user)
+            profile, _ = FinancialProfile.objects.get_or_create(user=request.user)
             for field, value in form.cleaned_data.items():
                 setattr(profile, field, value)
             profile.income = income
@@ -371,10 +378,10 @@ def assist_home(request):
             else:
                 suggestion_messages.append("💡 Consider starting small investments based on your risk tolerance.")
 
-            risk = getattr(profile, "risk_tolerance", "Medium")
-            if risk.lower() == "high":
+            risk = getattr(profile, "risk_tolerance", "Medium").lower()
+            if risk == "high":
                 suggestion_messages.append("⚠️ High risk tolerance. Diversify your investments.")
-            elif risk.lower() == "low":
+            elif risk == "low":
                 suggestion_messages.append("✅ Low risk tolerance. Prefer safer investments.")
 
             if getattr(profile, "monthly_savings_goal", 0) > net_savings:
@@ -431,7 +438,6 @@ Here are your personalized financial suggestions:
 Thank you for using our system.
 """
 
-            # Send assistance email asynchronously
             send_assistance_email_async(email_subject, email_message, request.user.email)
 
             return render(request, "assistance/result.html", {
@@ -443,20 +449,14 @@ Thank you for using our system.
                 "ml_recommendations": ml_recommendations,
                 "ml_assistance_required": assistance_required,
             })
-
         else:
+            messages.error(request, "Please correct the errors below.")
             return render(request, "assistance/home.html", {"form": form, "income": income})
 
     form = FinancialProfileForm()
     return render(request, "assistance/home.html", {"form": form, "income": income})
 
-
 @login_required
 def all_suggestions(request):
-    """View full suggestion history for a user."""
     suggestions = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")
     return render(request, "assistance/all_suggestions.html", {"suggestions": suggestions})
-
-# -------------------------------------------------------------------
-# All Suggestions
-
