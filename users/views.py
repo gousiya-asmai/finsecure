@@ -18,7 +18,7 @@ from users.models import UserProfile
 from django.shortcuts import render, redirect
 
 from users.utils import fetch_latest_emails, fetch_recent_transactions, save_transactions_to_db
-from users.sendgrid_utils import send_otp_via_sendgrid
+from users.otp_utils import send_otp_via_sendgrid
 
 
 from django.conf import settings
