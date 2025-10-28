@@ -18,7 +18,9 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from assistance.utils import train_model, predict_assistance, generate_recommendations, is_gmail_connected
+import logging
 
+logger = logging.getLogger(__name__)
 
 
 
@@ -165,30 +167,8 @@ def dashboard(request):
 # -------------------------------------------------------------------
 # ---------------- Assistance ----------------
 
-import threading
-import logging
-from django.core.mail import send_mail
-from django.conf import settings
-from django.utils import timezone
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-from django.contrib import messages
 
-from .forms import FinancialProfileForm
-from .models import FinancialProfile, AssistanceResult, SmartSuggestion
-from users.models import UserProfile
-from users.utils import fetch_recent_transactions, generate_suggestions
-from assistance.utils import predict_assistance, generate_recommendations
 
-logger = logging.getLogger(__name__)
-
-def send_email_async(subject, message, from_email, recipient_list):
-    logger.info(f"Async email send started for: {recipient_list}")
-    try:
-        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-        logger.info(f"Async email sent successfully to: {recipient_list}")
-    except Exception as e:
-        logger.error(f"Async email sending error for {recipient_list}: {e}")
 
 @login_required
 def assist_home(request):
@@ -295,19 +275,18 @@ Here are your personalized financial suggestions:
 Thank you for using our system.
 """
 
-            # For urgent debugging: send synchronously
-            # Uncomment below to test if email sending works immediately
-            # try:
-            #     send_mail(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [request.user.email], fail_silently=False)
-            #     logger.info("Synchronous assistance email sent successfully")
-            # except Exception as e:
-            #     logger.error(f"Synchronous assistance email error: {e}")
-
-            # Send email asynchronously to avoid blocking
-            threading.Thread(
-                target=send_email_async,
-                args=(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [request.user.email]),
-            ).start()
+            # TEMPORARY: Send email synchronously for immediate debug feedback
+            try:
+                send_mail(
+                    email_subject,
+                    email_message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [request.user.email],
+                    fail_silently=False,
+                )
+                print("DEBUG: Synchronous assistance email sent successfully")
+            except Exception as e:
+                print(f"DEBUG: Synchronous assistance email sending error: {e}")
 
             return render(request, "assistance/result.html", {
                 "profile": profile,
@@ -323,6 +302,7 @@ Thank you for using our system.
 
     form = FinancialProfileForm()
     return render(request, "assistance/home.html", {"form": form, "income": income})
+
 
 
 
