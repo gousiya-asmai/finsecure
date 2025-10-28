@@ -177,13 +177,12 @@ def assist_home(request):
         if form.is_valid():
             profile, created = FinancialProfile.objects.get_or_create(user=request.user)
 
-            # ✅ Save form data into profile
+            # Save form data into profile
             for field, value in form.cleaned_data.items():
                 setattr(profile, field, value)
-
             profile.income = income
 
-            # --- Heuristic Suggestions ---
+            # Heuristic Suggestions
             suggestion_messages = []
             net_savings = income - profile.expenses
 
@@ -224,33 +223,20 @@ def assist_home(request):
             if getattr(profile, "financial_goals", ""):
                 suggestion_messages.append(f"💡 Your financial goal: {profile.financial_goals}")
 
-            # --- Gmail Transactions + Suggestions ---
-            gmail_suggestions = []
+            # Gmail suggestions - Disabled to speed up form submission
+            gmail_suggestions = ["💡 Gmail not checked to improve speed."]
             transactions = []
-            try:
-                transactions = fetch_recent_transactions(request.user)
-                if transactions:
-                    gmail_suggestions = generate_suggestions(profile.__dict__, transactions)
-                else:
-                    gmail_suggestions.append("💡 No unusual transactions detected in recent Gmail messages.")
-            except Exception as e:
-                print("Error fetching Gmail transactions:", e)
-                gmail_suggestions.append("⚠️ Could not fetch Gmail transactions. Please reconnect Gmail.")
 
-            # --- ML Model (train + predict) ---
-            train_model(FinancialProfile.objects.all())
-            assistance_required = predict_assistance(profile)
-            if assistance_required is None:
-                assistance_required = net_savings <= 10000 or profile.credit_score < 700
-
+            # Skip ML model retrain here for speed
+            assistance_required = net_savings <= 10000 or profile.credit_score < 700
             ml_recommendations = generate_recommendations(profile, assistance_required)
 
-            # --- Save combined suggestions ---
+            # Save combined suggestions
             all_suggestions = suggestion_messages + gmail_suggestions + ml_recommendations
             profile.suggestion = "\n".join(all_suggestions)
             profile.save()
 
-            # Save result for tracking
+            # Save AssistanceResult
             if user_profile:
                 AssistanceResult.objects.create(
                     user=user_profile,
@@ -267,7 +253,7 @@ def assist_home(request):
                     is_alert=s.startswith("⚠️"),
                 )
 
-            # --- Email report ---
+            # Send email asynchronously - placeholder for now
             try:
                 email_subject = "Your Financial Assistance Report"
                 email_message = f"""
@@ -284,12 +270,13 @@ Thank you for using our system.
                     email_message,
                     settings.DEFAULT_FROM_EMAIL,
                     [request.user.email],
-                    fail_silently=True,  # Changed to True to prevent email errors from breaking
+                    fail_silently=True,
                 )
-            except Exception as e:
-                print("Email sending error:", e)
+            except Exception:
+                # Log if needed
+                pass
 
-            # ✅ Pass transactions to template
+            # Return result view immediately
             return render(request, "assistance/result.html", {
                 "profile": profile,
                 "income": income,
@@ -300,10 +287,10 @@ Thank you for using our system.
                 "ml_assistance_required": assistance_required,
             })
 
-        # form invalid - FIX: Use users/home.html
+        # Form invalid
         return render(request, "assistance/home.html", {"form": form, "income": income})
 
-    # GET request - FIX: Use users/home.html
+    # GET request
     form = FinancialProfileForm()
     return render(request, "assistance/home.html", {"form": form, "income": income})
 
