@@ -19,11 +19,8 @@ from googleapiclient.discovery import build
 
 from assistance.utils import train_model, predict_assistance, generate_recommendations, is_gmail_connected
 
-import threading
-import logging
 
 
-logger = logging.getLogger(__name__)
 
 # Gmail API scopes
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
@@ -169,12 +166,19 @@ def dashboard(request):
 # ---------------- Assistance ----------------
 
 
+import threading
+import logging
+
+
+logger = logging.getLogger(__name__)
+
 def send_email_async(subject, message, from_email, recipient_list):
+    logger.info(f"Async email send started for: {recipient_list}")
     try:
         send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-        logger.info(f"Email sent asynchronously to {recipient_list}")
+        logger.info(f"Async email sent successfully to: {recipient_list}")
     except Exception as e:
-        logger.error(f"Async email sending error: {e}")
+        logger.error(f"Async email sending error for {recipient_list}: {e}")
 
 @login_required
 def assist_home(request):
@@ -193,7 +197,6 @@ def assist_home(request):
                 setattr(profile, field, value)
             profile.income = income
 
-            # Heuristic Suggestions
             suggestion_messages = []
             net_savings = income - profile.expenses
 
@@ -271,7 +274,6 @@ def assist_home(request):
                     is_alert=s.startswith("⚠️"),
                 )
 
-            # Prepare email content
             email_subject = "Your Financial Assistance Report"
             email_message = f"""
 Dear {request.user.get_full_name() or request.user.username},
@@ -283,7 +285,7 @@ Here are your personalized financial suggestions:
 Thank you for using our system.
 """
 
-            # Send email asynchronously to avoid blocking form submission
+            # Send email asynchronously to avoid request blocking
             threading.Thread(
                 target=send_email_async,
                 args=(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [request.user.email]),
@@ -303,6 +305,7 @@ Thank you for using our system.
 
     form = FinancialProfileForm()
     return render(request, "assistance/home.html", {"form": form, "income": income})
+
 
 
 # -------------------------------------------------------------------
