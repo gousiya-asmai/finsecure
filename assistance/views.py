@@ -460,3 +460,13 @@ Thank you for using our system.
 def all_suggestions(request):
     suggestions = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")
     return render(request, "assistance/all_suggestions.html", {"suggestions": suggestions})
+
+
+def privacy_policy(request):
+    return render(request, "privacy_policy.html")
+
+
+from django.shortcuts import render
+
+def terms_of_service(request):
+    return render(request, "terms_of_service.html")
