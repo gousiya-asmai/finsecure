@@ -19,7 +19,7 @@ from googleapiclient.discovery import build
 
 from assistance.utils import train_model, predict_assistance, generate_recommendations, is_gmail_connected
 import logging
-from users.assistance_utils import send_assistance_email_async
+from assistance.assistance_utils import send_assistance_email_async
 
 logger = logging.getLogger(__name__)
 
