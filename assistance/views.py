@@ -162,6 +162,15 @@ def dashboard(request):
 # Assistance Engine
 # -------------------------------------------------------------------
 # ---------------- Assistance ----------------
+import threading
+
+def send_email_async(subject, message, from_email, recipient_list):
+    from django.core.mail import send_mail
+    try:
+        send_mail(subject, message, from_email, recipient_list, fail_silently=True)
+    except Exception as e:
+        print(f"Async email sending error: {e}")
+
 @login_required
 def assist_home(request):
     try:
@@ -179,38 +188,61 @@ def assist_home(request):
                 setattr(profile, field, value)
             profile.income = income
 
+            # Heuristic Suggestions
             suggestion_messages = []
             net_savings = income - profile.expenses
 
-            # previous heuristics ...
-            # your existing suggestion messages logic
+            if net_savings > 10000:
+                suggestion_messages.append("💡 Your savings are healthy. You can invest more.")
+            else:
+                suggestion_messages.append("⚠️ Consider reducing expenses to improve savings.")
 
-            ### Gmail fetching with timeout ###
+            if profile.credit_score >= 750:
+                suggestion_messages.append("✅ Excellent credit score. Eligible for premium loans or credit cards.")
+            elif 650 <= profile.credit_score < 750:
+                suggestion_messages.append("⚠️ Average credit score. Improve your credit for better options.")
+            else:
+                suggestion_messages.append("⚠️ Low credit score. Work on repayments to improve your score.")
+
+            debts = getattr(profile, "debts", 0) or 0
+            monthly_investment = getattr(profile, "monthly_investment", 0) or 0
+
+            if debts > 0:
+                suggestion_messages.append(f"⚠️ You have outstanding debts of ₹{debts}. Try reducing them.")
+            else:
+                suggestion_messages.append("✅ No debts. Keep up good financial health.")
+
+            if monthly_investment > 0:
+                suggestion_messages.append("💡 Your current investments are on track.")
+            else:
+                suggestion_messages.append("💡 Consider starting small investments based on your risk tolerance.")
+
+            risk = getattr(profile, "risk_tolerance", "Medium")
+            if risk.lower() == "high":
+                suggestion_messages.append("⚠️ High risk tolerance. Diversify your investments.")
+            elif risk.lower() == "low":
+                suggestion_messages.append("✅ Low risk tolerance. Prefer safer investments.")
+
+            if getattr(profile, "monthly_savings_goal", 0) > net_savings:
+                suggestion_messages.append("⚠️ Your savings goal is higher than your current net savings. Please adjust your budget.")
+
+            if getattr(profile, "financial_goals", ""):
+                suggestion_messages.append(f"💡 Your financial goal: {profile.financial_goals}")
+
+            # Gmail suggestions with try-except for safety
             gmail_suggestions = []
             transactions = []
             try:
-                from django.utils.decorators import method_decorator
-                import signal
-
-                def handler(signum, frame):
-                    raise TimeoutError("Gmail fetch timed out")
-
-                # Set signal timeout handler
-                signal.signal(signal.SIGALRM, handler)
-                signal.alarm(5)  # 5 seconds timeout
-
                 transactions = fetch_recent_transactions(request.user)
-                signal.alarm(0)  # cancel alarm on success
-
                 if transactions:
                     gmail_suggestions = generate_suggestions(profile.__dict__, transactions)
                 else:
                     gmail_suggestions.append("💡 No unusual transactions detected in recent Gmail messages.")
-
             except Exception as e:
-                gmail_suggestions.append("⚠️ Gmail fetch failed or timed out. Please reconnect Gmail.")
+                print("Error fetching Gmail transactions:", e)
+                gmail_suggestions.append("⚠️ Could not fetch Gmail transactions. Please reconnect Gmail.")
 
-            # Asynchronous ML retrain simulation: skip heavy training
+            # Skip model retraining for speed (or run offline)
             assistance_required = predict_assistance(profile)
             if assistance_required is None:
                 assistance_required = net_savings <= 10000 or profile.credit_score < 700
@@ -236,9 +268,9 @@ def assist_home(request):
                     is_alert=s.startswith("⚠️"),
                 )
 
-            try:
-                email_subject = "Your Financial Assistance Report"
-                email_message = f"""
+            # Send email asynchronously to avoid blocking
+            email_subject = "Your Financial Assistance Report"
+            email_message = f"""
 Dear {request.user.get_full_name() or request.user.username},
 
 Here are your personalized financial suggestions:
@@ -247,15 +279,7 @@ Here are your personalized financial suggestions:
 
 Thank you for using our system.
 """
-                send_mail(
-                    email_subject,
-                    email_message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [request.user.email],
-                    fail_silently=True,
-                )
-            except Exception as e:
-                pass  # log if necessary
+            threading.Thread(target=send_email_async, args=(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [request.user.email])).start()
 
             return render(request, "assistance/result.html", {
                 "profile": profile,
@@ -271,6 +295,7 @@ Thank you for using our system.
 
     form = FinancialProfileForm()
     return render(request, "assistance/home.html", {"form": form, "income": income})
+
 
 
 # -------------------------------------------------------------------

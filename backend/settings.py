@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "fraud",
     "emails",
     "transactions",
+    'django_q',
 ]
 
 # ---------------- Middleware ----------------
@@ -236,3 +237,12 @@ if DEBUG:
 else:
     # For production, use HTTP API or fix SMTP settings
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+Q_CLUSTER = {
+    'name': 'DjangoQ',
+    'workers': 4,
+    'recycle': 500,
+    'timeout': 60,
+    'queue_limit': 50,
+    'orm': 'default',
+}
