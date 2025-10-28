@@ -295,6 +295,15 @@ Here are your personalized financial suggestions:
 Thank you for using our system.
 """
 
+            # For urgent debugging: send synchronously
+            # Uncomment below to test if email sending works immediately
+            # try:
+            #     send_mail(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [request.user.email], fail_silently=False)
+            #     logger.info("Synchronous assistance email sent successfully")
+            # except Exception as e:
+            #     logger.error(f"Synchronous assistance email error: {e}")
+
+            # Send email asynchronously to avoid blocking
             threading.Thread(
                 target=send_email_async,
                 args=(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [request.user.email]),
@@ -314,6 +323,7 @@ Thank you for using our system.
 
     form = FinancialProfileForm()
     return render(request, "assistance/home.html", {"form": form, "income": income})
+
 
 
 @login_required
