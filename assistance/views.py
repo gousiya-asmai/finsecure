@@ -167,20 +167,12 @@ def dashboard(request):
 # Assistance Engine
 # -------------------------------------------------------------------
 # ---------------- Assistance ----------------
-import threading
-
-def send_email_async(subject, message, from_email, recipient_list):
-    from django.core.mail import send_mail
-    try:
-        send_mail(subject, message, from_email, recipient_list, fail_silently=True)
-    except Exception as e:
-        print(f"Async email sending error: {e}")
 
 
 def send_email_async(subject, message, from_email, recipient_list):
     try:
         send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-        logger.info(f"Email sent successfully to {recipient_list}")
+        logger.info(f"Email sent asynchronously to {recipient_list}")
     except Exception as e:
         logger.error(f"Async email sending error: {e}")
 
@@ -242,7 +234,6 @@ def assist_home(request):
             if getattr(profile, "financial_goals", ""):
                 suggestion_messages.append(f"💡 Your financial goal: {profile.financial_goals}")
 
-            # Gmail suggestions with try-except for safety
             gmail_suggestions = []
             transactions = []
             try:
@@ -255,7 +246,6 @@ def assist_home(request):
                 logger.error(f"Error fetching Gmail transactions: {e}")
                 gmail_suggestions.append("⚠️ Could not fetch Gmail transactions. Please reconnect Gmail.")
 
-            # Model assistance prediction
             assistance_required = predict_assistance(profile)
             if assistance_required is None:
                 assistance_required = net_savings <= 10000 or profile.credit_score < 700
@@ -293,20 +283,7 @@ Here are your personalized financial suggestions:
 Thank you for using our system.
 """
 
-            # Send email synchronously first for debugging
-            try:
-                send_mail(
-                    email_subject,
-                    email_message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [request.user.email],
-                    fail_silently=False,
-                )
-                logger.info(f"Synchronous email sent to {request.user.email}")
-            except Exception as e:
-                logger.error(f"Synchronous email sending error: {e}")
-
-            # Then send asynchronously (optional - can comment if debugging)
+            # Send email asynchronously to avoid blocking form submission
             threading.Thread(
                 target=send_email_async,
                 args=(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [request.user.email]),
