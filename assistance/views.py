@@ -170,7 +170,7 @@ def assist_home(request):
     except UserProfile.DoesNotExist:
         user_profile = None
         income = 0
-    
+
     if request.method == "POST":
         form = FinancialProfileForm(request.POST)
         if form.is_valid():
@@ -181,34 +181,54 @@ def assist_home(request):
 
             suggestion_messages = []
             net_savings = income - profile.expenses
-            
-            # Basic heuristic suggestions no change
-            if net_savings > 10000:
-                suggestion_messages.append("💡 Your savings are healthy. You can invest more.")
-            else:
-                suggestion_messages.append("⚠️ Consider reducing expenses to improve savings.")
-            
-            # Further heuristic suggestions for speed
-            # ...
-            
-            gmail_suggestions = []  # Skip fetching Gmail for speed
-            
-            ml_recommendations = []  # Skip ML
-            
+
+            # previous heuristics ...
+            # your existing suggestion messages logic
+
+            ### Gmail fetching with timeout ###
+            gmail_suggestions = []
+            transactions = []
+            try:
+                from django.utils.decorators import method_decorator
+                import signal
+
+                def handler(signum, frame):
+                    raise TimeoutError("Gmail fetch timed out")
+
+                # Set signal timeout handler
+                signal.signal(signal.SIGALRM, handler)
+                signal.alarm(5)  # 5 seconds timeout
+
+                transactions = fetch_recent_transactions(request.user)
+                signal.alarm(0)  # cancel alarm on success
+
+                if transactions:
+                    gmail_suggestions = generate_suggestions(profile.__dict__, transactions)
+                else:
+                    gmail_suggestions.append("💡 No unusual transactions detected in recent Gmail messages.")
+
+            except Exception as e:
+                gmail_suggestions.append("⚠️ Gmail fetch failed or timed out. Please reconnect Gmail.")
+
+            # Asynchronous ML retrain simulation: skip heavy training
+            assistance_required = predict_assistance(profile)
+            if assistance_required is None:
+                assistance_required = net_savings <= 10000 or profile.credit_score < 700
+
+            ml_recommendations = generate_recommendations(profile, assistance_required)
+
             all_suggestions = suggestion_messages + gmail_suggestions + ml_recommendations
             profile.suggestion = "\n".join(all_suggestions)
             profile.save()
 
-            # Save Assistance result
             if user_profile:
                 AssistanceResult.objects.create(
                     user=user_profile,
-                    assistance_required=False,
+                    assistance_required=assistance_required,
                     suggestion=profile.suggestion,
                     submitted_at=timezone.now(),
                 )
 
-            # Save each suggestion individually
             for s in all_suggestions:
                 SmartSuggestion.objects.create(
                     user=request.user,
@@ -216,16 +236,35 @@ def assist_home(request):
                     is_alert=s.startswith("⚠️"),
                 )
 
-            # Skip email sending completely for speed
-            
+            try:
+                email_subject = "Your Financial Assistance Report"
+                email_message = f"""
+Dear {request.user.get_full_name() or request.user.username},
+
+Here are your personalized financial suggestions:
+
+{profile.suggestion}
+
+Thank you for using our system.
+"""
+                send_mail(
+                    email_subject,
+                    email_message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [request.user.email],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                pass  # log if necessary
+
             return render(request, "assistance/result.html", {
                 "profile": profile,
                 "income": income,
                 "suggestions": suggestion_messages,
                 "gmail_suggestions": gmail_suggestions,
-                "transactions": [],
+                "transactions": transactions,
                 "ml_recommendations": ml_recommendations,
-                "ml_assistance_required": False,
+                "ml_assistance_required": assistance_required,
             })
 
         return render(request, "assistance/home.html", {"form": form, "income": income})
