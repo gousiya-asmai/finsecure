@@ -164,83 +164,46 @@ def dashboard(request):
 # ---------------- Assistance ----------------
 @login_required
 def assist_home(request):
-    """Main financial assistance logic (heuristics + ML + Gmail)."""
     try:
         user_profile = UserProfile.objects.get(user=request.user)
         income = user_profile.income or 0
     except UserProfile.DoesNotExist:
         user_profile = None
         income = 0
-
+    
     if request.method == "POST":
         form = FinancialProfileForm(request.POST)
         if form.is_valid():
             profile, created = FinancialProfile.objects.get_or_create(user=request.user)
-
-            # Save form data into profile
             for field, value in form.cleaned_data.items():
                 setattr(profile, field, value)
             profile.income = income
 
-            # Heuristic Suggestions
             suggestion_messages = []
             net_savings = income - profile.expenses
-
+            
+            # Basic heuristic suggestions no change
             if net_savings > 10000:
                 suggestion_messages.append("💡 Your savings are healthy. You can invest more.")
             else:
                 suggestion_messages.append("⚠️ Consider reducing expenses to improve savings.")
-
-            if profile.credit_score >= 750:
-                suggestion_messages.append("✅ Excellent credit score. Eligible for premium loans or credit cards.")
-            elif 650 <= profile.credit_score < 750:
-                suggestion_messages.append("⚠️ Average credit score. Improve your credit for better options.")
-            else:
-                suggestion_messages.append("⚠️ Low credit score. Work on repayments to improve your score.")
-
-            debts = getattr(profile, "debts", 0) or 0
-            monthly_investment = getattr(profile, "monthly_investment", 0) or 0
-
-            if debts > 0:
-                suggestion_messages.append(f"⚠️ You have outstanding debts of ₹{debts}. Try reducing them.")
-            else:
-                suggestion_messages.append("✅ No debts. Keep up good financial health.")
-
-            if monthly_investment > 0:
-                suggestion_messages.append("💡 Your current investments are on track.")
-            else:
-                suggestion_messages.append("💡 Consider starting small investments based on your risk tolerance.")
-
-            risk = getattr(profile, "risk_tolerance", "Medium")
-            if risk.lower() == "high":
-                suggestion_messages.append("⚠️ High risk tolerance. Diversify your investments.")
-            elif risk.lower() == "low":
-                suggestion_messages.append("✅ Low risk tolerance. Prefer safer investments.")
-
-            if getattr(profile, "monthly_savings_goal", 0) > net_savings:
-                suggestion_messages.append("⚠️ Your savings goal is higher than your current net savings. Please adjust your budget.")
-
-            if getattr(profile, "financial_goals", ""):
-                suggestion_messages.append(f"💡 Your financial goal: {profile.financial_goals}")
-
-            # Gmail suggestions - Disabled to speed up form submission
-            gmail_suggestions = ["💡 Gmail not checked to improve speed."]
-            transactions = []
-
-            # Skip ML model retrain here for speed
-            assistance_required = net_savings <= 10000 or profile.credit_score < 700
-            ml_recommendations = generate_recommendations(profile, assistance_required)
-
-            # Save combined suggestions
+            
+            # Further heuristic suggestions for speed
+            # ...
+            
+            gmail_suggestions = []  # Skip fetching Gmail for speed
+            
+            ml_recommendations = []  # Skip ML
+            
             all_suggestions = suggestion_messages + gmail_suggestions + ml_recommendations
             profile.suggestion = "\n".join(all_suggestions)
             profile.save()
 
-            # Save AssistanceResult
+            # Save Assistance result
             if user_profile:
                 AssistanceResult.objects.create(
                     user=user_profile,
-                    assistance_required=assistance_required,
+                    assistance_required=False,
                     suggestion=profile.suggestion,
                     submitted_at=timezone.now(),
                 )
@@ -253,44 +216,20 @@ def assist_home(request):
                     is_alert=s.startswith("⚠️"),
                 )
 
-            # Send email asynchronously - placeholder for now
-            try:
-                email_subject = "Your Financial Assistance Report"
-                email_message = f"""
-Dear {request.user.get_full_name() or request.user.username},
-
-Here are your personalized financial suggestions:
-
-{profile.suggestion}
-
-Thank you for using our system.
-"""
-                send_mail(
-                    email_subject,
-                    email_message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [request.user.email],
-                    fail_silently=True,
-                )
-            except Exception:
-                # Log if needed
-                pass
-
-            # Return result view immediately
+            # Skip email sending completely for speed
+            
             return render(request, "assistance/result.html", {
                 "profile": profile,
                 "income": income,
                 "suggestions": suggestion_messages,
                 "gmail_suggestions": gmail_suggestions,
-                "transactions": transactions,
+                "transactions": [],
                 "ml_recommendations": ml_recommendations,
-                "ml_assistance_required": assistance_required,
+                "ml_assistance_required": False,
             })
 
-        # Form invalid
         return render(request, "assistance/home.html", {"form": form, "income": income})
 
-    # GET request
     form = FinancialProfileForm()
     return render(request, "assistance/home.html", {"form": form, "income": income})
 
