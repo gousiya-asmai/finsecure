@@ -19,6 +19,11 @@ from googleapiclient.discovery import build
 
 from assistance.utils import train_model, predict_assistance, generate_recommendations, is_gmail_connected
 
+import threading
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 # Gmail API scopes
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
@@ -171,6 +176,14 @@ def send_email_async(subject, message, from_email, recipient_list):
     except Exception as e:
         print(f"Async email sending error: {e}")
 
+
+def send_email_async(subject, message, from_email, recipient_list):
+    try:
+        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+        logger.info(f"Email sent successfully to {recipient_list}")
+    except Exception as e:
+        logger.error(f"Async email sending error: {e}")
+
 @login_required
 def assist_home(request):
     try:
@@ -239,10 +252,10 @@ def assist_home(request):
                 else:
                     gmail_suggestions.append("💡 No unusual transactions detected in recent Gmail messages.")
             except Exception as e:
-                print("Error fetching Gmail transactions:", e)
+                logger.error(f"Error fetching Gmail transactions: {e}")
                 gmail_suggestions.append("⚠️ Could not fetch Gmail transactions. Please reconnect Gmail.")
 
-            # Skip model retraining for speed (or run offline)
+            # Model assistance prediction
             assistance_required = predict_assistance(profile)
             if assistance_required is None:
                 assistance_required = net_savings <= 10000 or profile.credit_score < 700
@@ -268,7 +281,7 @@ def assist_home(request):
                     is_alert=s.startswith("⚠️"),
                 )
 
-            # Send email asynchronously to avoid blocking
+            # Prepare email content
             email_subject = "Your Financial Assistance Report"
             email_message = f"""
 Dear {request.user.get_full_name() or request.user.username},
@@ -279,7 +292,25 @@ Here are your personalized financial suggestions:
 
 Thank you for using our system.
 """
-            threading.Thread(target=send_email_async, args=(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [request.user.email])).start()
+
+            # Send email synchronously first for debugging
+            try:
+                send_mail(
+                    email_subject,
+                    email_message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [request.user.email],
+                    fail_silently=False,
+                )
+                logger.info(f"Synchronous email sent to {request.user.email}")
+            except Exception as e:
+                logger.error(f"Synchronous email sending error: {e}")
+
+            # Then send asynchronously (optional - can comment if debugging)
+            threading.Thread(
+                target=send_email_async,
+                args=(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [request.user.email]),
+            ).start()
 
             return render(request, "assistance/result.html", {
                 "profile": profile,
@@ -295,7 +326,6 @@ Thank you for using our system.
 
     form = FinancialProfileForm()
     return render(request, "assistance/home.html", {"form": form, "income": income})
-
 
 
 # -------------------------------------------------------------------
