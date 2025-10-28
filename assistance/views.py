@@ -165,10 +165,20 @@ def dashboard(request):
 # -------------------------------------------------------------------
 # ---------------- Assistance ----------------
 
-
 import threading
 import logging
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils import timezone
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.contrib import messages
 
+from .forms import FinancialProfileForm
+from .models import FinancialProfile, AssistanceResult, SmartSuggestion
+from users.models import UserProfile
+from users.utils import fetch_recent_transactions, generate_suggestions
+from assistance.utils import predict_assistance, generate_recommendations
 
 logger = logging.getLogger(__name__)
 
@@ -285,7 +295,6 @@ Here are your personalized financial suggestions:
 Thank you for using our system.
 """
 
-            # Send email asynchronously to avoid request blocking
             threading.Thread(
                 target=send_email_async,
                 args=(email_subject, email_message, settings.DEFAULT_FROM_EMAIL, [request.user.email]),
@@ -307,12 +316,12 @@ Thank you for using our system.
     return render(request, "assistance/home.html", {"form": form, "income": income})
 
 
-
-# -------------------------------------------------------------------
-# All Suggestions
-# -------------------------------------------------------------------
 @login_required
 def all_suggestions(request):
     """View full suggestion history for a user."""
     suggestions = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")
     return render(request, "assistance/all_suggestions.html", {"suggestions": suggestions})
+
+# -------------------------------------------------------------------
+# All Suggestions
+
