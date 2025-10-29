@@ -444,3 +444,10 @@ def test_messages_view(request):
     
     from django.shortcuts import redirect
     return redirect('dashboard')
+
+from django.http import HttpResponse
+from django.core.management import call_command
+
+def run_temp_superuser(request):
+    call_command('create_or_reset_superuser')  # your custom command
+    return HttpResponse("Superuser created or reset. Delete this view after use.")

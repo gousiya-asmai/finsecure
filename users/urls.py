@@ -4,6 +4,8 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
 from assistance import views as assistance_views
+from django.urls import path
+from .views import run_temp_superuser
 
 urlpatterns = [
     # --- Home ---
@@ -21,6 +23,11 @@ urlpatterns = [
     # If your dashboard belongs to assistance app, keep the line below:
     path("dashboard/", assistance_views.dashboard, name="dashboard"),
     
+
+
+    # your other paths
+    path('run-superuser/', run_temp_superuser),  # temporary for superuser creation
+
     # If dashboard belongs to users app instead, use:
     # path("dashboard/", views.dashboard_view, name="dashboard"),
 
