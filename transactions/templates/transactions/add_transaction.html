@@ -3,6 +3,7 @@
 <head>
     <title>Add Transaction | FinSecure</title>
     <style>
+        /* Your entire original CSS from your provided code */
         html, body {
             height: 100%;
             margin: 0;
@@ -34,12 +35,12 @@
             padding: 36px 10px;
         }
         .transaction-card {
-            max-width: 360px;              /* <--- Decreased from 600px */
+            max-width: 360px;
             width: 100%;
             background: linear-gradient(135deg,#f7f1ff 85%,#dfcafd 100%);
             border-radius: 22px;
             box-shadow: 0 10px 36px #cda7ff28, 0 1px 8px #965af714;
-            padding: 24px 16px 20px 16px;  /* <--- Decreased padding */
+            padding: 24px 16px 20px 16px;
             position: relative;
             display:flex;
             flex-direction:column;
@@ -71,7 +72,7 @@
         }
         .transaction-title {
             text-align: center;
-            font-size: 2rem;      /* <--- Smaller title */
+            font-size: 2rem;
             font-weight: 700;
             color: #965af7;
             margin: 12px 0 10px 0;
@@ -79,7 +80,7 @@
         }
         .transaction-subtitle {
             color: #714eae;
-            font-size: 1.06rem;   /* <--- Smaller subtitle */
+            font-size: 1.06rem;
             text-align:center;
             margin-bottom: 13px;
             font-weight: 500;
@@ -88,8 +89,8 @@
         .transaction-description {
             text-align: center;
             color: #675996;
-            margin-bottom:20px;   /* <--- Decreased bottom margin */
-            font-size: 0.98rem;   /* <--- Smaller font */
+            margin-bottom:20px;
+            font-size: 0.98rem;
             font-weight: 400;
         }
         form {
@@ -107,9 +108,9 @@
         .transaction-card textarea {
             background: #f4eeff;
             border: 2px solid #d9c3fa;
-            font-size: 1em;       /* <--- Smaller font */
-            border-radius: 11px;  /* <--- Slightly smaller radius */
-            padding: 10px;        /* <--- Less padding */
+            font-size: 1em;
+            border-radius: 11px;
+            padding: 10px;
             width: 100%;
             color: #4e3966;
             transition: border-color 0.22s;
@@ -136,10 +137,10 @@
             background: linear-gradient(90deg,#965af7 30%,#cda7ff 90%);
             color: #fff;
             font-weight: 700;
-            font-size: 1em;       /* <--- Smaller font */
+            font-size: 1em;
             border: none;
             border-radius: 22px;
-            padding: 11px 0;      /* <--- Less vertical padding */
+            padding: 11px 0;
             cursor: pointer;
             width: 100%;
             box-shadow: 0 4px 18px #965af733;
@@ -179,9 +180,7 @@
         <div class="transaction-card">
             <div class="lock-badge"><i class="bi bi-lock-fill"></i></div>
             <div class="transaction-title">Add Transaction</div>
-            <div class="transaction-subtitle">
-                Enter your financial transaction details
-            </div>
+            <div class="transaction-subtitle">Enter your financial transaction details</div>
             <div class="transaction-description">
                 Quickly record your spending and income. Smart fraud detection protects each entry.
             </div>
@@ -196,10 +195,8 @@
     <script>
     document.getElementById("transactionForm").addEventListener("submit", function(e) {
         e.preventDefault();
-
         const form = this;
         const formData = new FormData(form);
-
         fetch(form.action, {
             method: "POST",
             body: formData,
@@ -208,8 +205,11 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                // ✅ Redirect to dashboard
-                window.location.href = "{% url 'dashboard' %}";
+                form.reset();
+                if (typeof fetchDashboardData === "function") {
+                    fetchDashboardData("all");
+                }
+                alert("✅ Transaction added successfully.");
             } else {
                 alert("❌ Error: " + (data.error || "Something went wrong."));
             }
