@@ -13,7 +13,6 @@ body {
   background-size: cover;
 }
 
-
 .top-navbar {
   position: fixed;
   left: 0; top: 0;
@@ -91,8 +90,6 @@ body {
   stroke-width: 2.3;
   fill: none;
 }
-
-/* User icon as a single circle with inside silhouette */
 .glass-card .large-login-icon .user-circle {
   stroke: #55bbf8;
   fill: none;
@@ -105,8 +102,6 @@ body {
   fill: #5dc8fc5a;
   stroke: #72cfff;
 }
-
-
 .glass-card .login-title {
   font-size: 2.7rem;
   color: #85d6ff;
@@ -161,6 +156,23 @@ body {
 .glass-card .glass-btn:hover { background: linear-gradient(95deg, #0c6bd9, #40c6fa 98%); color: #fff; transform: scale(1.07);}
 .glass-card .glass-btn-outline:hover { background: #58aafd22; color: #fff; }
 
+/* Privacy/Terms links inside card */
+.glass-card .policy-links {
+  margin-top: 34px;
+  text-align: center;
+  width: 100%;
+}
+.glass-card .policy-links a {
+  color: #6bddfd;
+  font-weight: 500;
+  text-decoration: underline;
+  margin: 0 12px;
+  font-size: 1rem;
+}
+.glass-card .policy-links a:hover {
+  color: #75baff;
+}
+
 @media (max-width:676px){
   .glass-card {padding:24px 1vw;width:98vw; min-width:0; height:auto;}
   .glass-card .large-login-icon { width: 68px; height: 68px;}
@@ -189,14 +201,11 @@ body {
     <div class="btn-row">
       <a href="{% url 'login' %}" class="glass-btn">Login</a>
       <a href="{% url 'signup' %}" class="glass-btn-outline">Register</a>
-      <footer style="text-align:center; margin-top:2em;">
-  <a href="/assistance/privacy-policy/">Privacy Policy</a>
-  &nbsp;|&nbsp;
-  <a href="/assistance/terms-of-service/">Terms of Service</a>
-</footer>
-
+    </div>
+    <div class="policy-links">
+      <a href="/assistance/privacy-policy/">Privacy Policy</a>
+      <a href="/assistance/terms-of-service/">Terms of Service</a>
     </div>
   </div>
 </div>
-
-{%endblock%}
+{% endblock %}
