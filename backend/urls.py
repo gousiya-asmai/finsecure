@@ -27,7 +27,6 @@ urlpatterns = [
     # --- App Routes ---
     path("users/", include("users.urls")),
     path("assistance/", include("assistance.urls")),
-    path("fraud/", include("fraud.urls")),
     path("transactions/", include("transactions.urls")),
     path("dashboard-data/", transaction_views.dashboard_data, name="dashboard_data"),
     path("auth/", include("social_django.urls", namespace="social")),

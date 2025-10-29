@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     # Custom apps
     "users.apps.UsersConfig",
     "assistance",
-    "fraud",
     "emails",
     "transactions",
     'django_q',
