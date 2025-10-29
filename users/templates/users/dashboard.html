@@ -30,49 +30,130 @@ body {
   z-index: 1100;
   display: flex;
   flex-direction: column;
+  transition: width .20s cubic-bezier(.4,2,.6,1);
+
 }
-.menu-toggle-btn { display: none; }
+.sidebar-nav.expanded { width: 250px; }
+.menu-toggle-btn {
+  background: none;
+  border: none;
+  color: #e1f4ff;
+  font-size: 2rem;
+  padding: 24px 0 19px 0;
+  text-align: center;
+  cursor: pointer;
+  outline: none;
+  margin-bottom: 4px;
+  display: block;
+}
+
+
 .sidebar-brand {
   color: #e1f4ff;
   font-weight: bold;
   font-size: 1.3rem;
   text-align: center;
   letter-spacing: .6px;
-  padding: 25px 0 13px 0;
+  padding:  0 0 13px 0;
   white-space:nowrap;
-  opacity: 1;
-  height:auto;
+  opacity: 0;
+  height:0;
+  transition: opacity .18s, height .18s;
+
 }
+.sidebar-nav.expanded .sidebar-brand { opacity:1; height:auto; padding-top:25px;}
 .sidebar-menu {
   flex: 1; margin-top: 0;
   display: flex; flex-direction: column;
 }
-.sidebar-menu a {
+.sidebar-menu a,
+.sidebar-menu .submenu-toggle {
   display: flex; align-items: center;
-  font-size: 1.07rem; /* Text always visible */
+  font-size: 0;
   font-weight: 500;
   color: #e0f3ff;
   padding: 16px 20px 16px 20px;
   text-decoration: none;
   border-left: 5px solid transparent;
-  transition: background .14s, color .14s, border-color .2s;
+  transition: background .14s, color .14s, border-color .2s, font-size .18s, padding .18s;
   border-radius: 6px 0 0 6px;
   margin-bottom: 2px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  outline: none;
 }
-.sidebar-menu a .bi { margin-right: 12px; font-size: 1.26em; transition:.17s;}
-.sidebar-menu a.active, .sidebar-menu a:hover {
+
+
+.sidebar-menu a .bi,
+.sidebar-menu .submenu-toggle .bi { margin-right: 0; font-size: 1.26em;}
+.sidebar-menu a.active, .sidebar-menu a:hover,
+.sidebar-menu .submenu-toggle.active, .sidebar-menu .submenu-toggle:hover {
   background: #2178b5;
   color: #fff;
   border-left: 5px solid #80c2fa;
 }
-.sidebar-menu a span {
+
+.sidebar-menu a span,
+.sidebar-menu .submenu-toggle span {
   margin-left: 8px;
   white-space:nowrap;
-  transition: none;
-  opacity:1;
-  pointer-events:auto;
+  transition: opacity .17s;
+  opacity:0;
+  pointer-events:none;
   font-size: 1.02em;
 }
+
+
+
+.sidebar-nav.expanded .sidebar-menu a,
+.sidebar-nav.expanded .sidebar-menu .submenu-toggle{
+  font-size: 1.07rem;
+  padding: 14px 32px 14px 26px;
+}
+.sidebar-nav.expanded .sidebar-menu a span,
+.sidebar-nav.expanded .sidebar-menu .submenu-toggle span {
+  opacity:1; pointer-events:auto;
+}
+
+/* Submenu styles */
+.sidebar-menu .submenu {
+  max-height: 0;
+  overflow: hidden;
+  background: #165e88;
+  transition: max-height 0.27s cubic-bezier(.4,2,.6,1);
+  margin-left: 0;
+  padding-left: 0;
+}
+.sidebar-menu .submenu.open {
+  max-height: 180px;
+}
+.sidebar-menu .submenu a {
+  font-size: 0;
+  padding: 14px 32px 14px 56px;
+  border-radius: 6px 0 0 6px;
+  border-left: 3px solid #0f5279 !important;
+  color: #cbe8fc;
+  background: none;
+  margin-bottom: 0;
+}
+.sidebar-nav.expanded .sidebar-menu .submenu a {
+  font-size: 1rem;
+}
+.sidebar-menu .submenu a.active, .sidebar-menu .submenu a:hover {
+  background: #2178b5;
+  color: #fff;
+  border-left: 3px solid #80c2fa !important;
+}
+.sidebar-menu .submenu-arrow {
+  margin-left: auto;
+  transition: transform 0.2s;
+}
+.sidebar-menu .submenu-toggle[aria-expanded="true"] .submenu-arrow {
+  transform: rotate(90deg);
+}
+
+
 .sidebar-footer {
   text-align: center;
   padding: 12px 0 0 0;
@@ -84,14 +165,15 @@ body {
   margin-left: 250px;
   padding: 32px 36px 32px 36px;
   min-height: 100vh;
+  transition: margin-left .20s cubic-bezier(.4,2,.6,1);
+
 }
-@media (max-width: 900px) {
-  .sidebar-nav { width: 130px; }
-  .sidebar-menu a { font-size: 0.98rem; padding: 13px 10px; }
-  .sidebar-menu a .bi { font-size: 1.1rem; margin: 0; }
-  .sidebar-menu a span { font-size: 1em; }
-  .main-content { margin-left: 130px; padding: 15px 4px 12px 10px;}
+.sidebar-nav.expanded ~ .main-content {
+  margin-left: 250px;
 }
+
+
+
 /* Top Card: Welcome/Profile */
 .dashboard-header-card {
   max-width: 950px;
@@ -149,16 +231,74 @@ body {
 .btn-info, .btn-outline-info { background-color: #e4f2fa !important; color: #2178b5 !important; border-color: #a9cadd !important;}
 .btn-danger, .btn-outline-danger { background-color: #be6c91 !important; color: #fff !important; border-color: #9c3d65 !important;}
 .btn { border-radius: 8px; }
+
+.graph-section { display: none; }
+.graph-section.active { display: block; }
+
+/* For vertical submenu under Reports (inherits your existing sidebar style) */
+.sidebar-menu .submenu-vertical {
+  display: none;
+  background: #165e88;
+  margin-left: 0;
+  border-radius: 6px 0 0 6px;
+  padding: 0;
+}
+.sidebar-menu .submenu-vertical.open { display: block; }
+.sidebar-menu .submenu-vertical a {
+  display: flex;
+  align-items: center;
+  color: #e0f3ff;
+  font-size: 1rem;
+  padding: 14px 32px 14px 56px;
+  border-radius: 6px 0 0 6px;
+  border-left: 3px solid #0f5279 !important;
+  background: none;
+  margin-bottom: 0;
+  text-decoration: none;
+  transition: background .14s, color .14s, border-color .2s;
+}
+.sidebar-menu .submenu-vertical a.active, .sidebar-menu .submenu-vertical a:hover {
+  background: #2178b5;
+  color: #fff;
+  border-left: 3px solid #80c2fa !important;
+}
+.sidebar-menu .submenu-vertical .bi {
+  margin-right: 10px;
+  font-size: 1.18em;
+}
 </style>
 
 <!-- Sidebar Navigation -->
-<nav class="sidebar-nav" aria-label="Side Navigation">
-  <div class="sidebar-brand">Finance System</div>
+<nav class="sidebar-nav" aria-label="Side Navigation" id="sidebar-nav">
+  <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Expand/collapse sidebar">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <div class="sidebar-brand">FinSecure</div>
   <div class="sidebar-menu">
     <a href="{% url 'dashboard' %}" class="active"><i class="bi bi-house-door-fill"></i><span>Dashboard</span></a>
-    <a href="{% url 'transactions:list' %}"><i class="bi bi-cash-coin"></i><span>Transactions</span></a>
+    <div>
+      <button class="submenu-toggle" id="transactions-menu" aria-expanded="false">
+        <i class="bi bi-cash-coin"></i><span>Transactions</span>
+        <span class="submenu-arrow bi bi-chevron-right"></span>
+      </button>
+      <div class="submenu" id="transactions-submenu">
+        <a href="{% url 'transactions:add' %}"><i class="bi bi-plus-circle"></i><span>Add Transaction</span></a>
+        <a href="{% url 'transactions:list' %}"><i class="bi bi-list-ul"></i><span>View All</span></a>
+      </div>
+    </div>
+
     <a href="{% url 'fraud_alerts' %}"><i class="bi bi-exclamation-triangle"></i><span>Fraud Alerts</span></a>
-    <a href="{% url 'reports' %}"><i class="bi bi-bar-chart-line"></i><span>Reports</span></a>
+    <button class="submenu-toggle" id="reports-menu" aria-expanded="false">
+
+        <i class="bi bi-bar-chart-line"></i><span>Reports</span>
+        <span class="submenu-arrow bi bi-chevron-right"></span>
+      </button>
+      <div class="submenu-vertical" id="reports-submenu">
+        <a href="#" class="show-graph" data-graph="spending"><i class="bi bi-graph-up"></i>Spending Graphs</a>
+        <a href="#" class="show-graph" data-graph="fraud-amount"><i class="bi bi-exclamation-diamond"></i>Fraud Amount</a>
+        <a href="#" class="show-graph" data-graph="fraud-count"><i class="bi bi-bar-chart"></i>Fraud Count</a>
+      </div>
     <a href="{% url 'settings' %}"><i class="bi bi-gear"></i><span>Settings</span></a>
   </div>
   <div class="sidebar-footer">© {{ now|date:"Y" }} FinSecure</div>
@@ -220,7 +360,7 @@ body {
           <div class="card-header bg-dark text-white">Transactions</div>
           <div class="card-body d-flex flex-column justify-content-center align-items-center">
             <a href="{% url 'transactions:add' %}" class="btn btn-success btn-sm mb-2">Add Transaction</a>
-            <a href="{% url 'transactions:list' %}" class="btn btn-outline-primary btn-sm">View All</a>
+            
           </div>
         </div>
       </div>
@@ -359,6 +499,7 @@ body {
   </div>
 
   <!-- Spending Graphs -->
+  <div id="spending-graph-section" class="graph-section"></div>
   <div class="dashboard-card">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center toggle-collapse"
          data-bs-toggle="collapse" data-bs-target="#spendingGraphs" style="cursor:pointer;">
@@ -375,6 +516,7 @@ body {
   </div>
 
   <!-- Fraud Amount Graphs -->
+  <div id="fraud-amount-graph-section" class="graph-section"></div>
   <div class="dashboard-card">
     <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center toggle-collapse"
          data-bs-toggle="collapse" data-bs-target="#fraudAmountGraphs" style="cursor:pointer;">
@@ -391,6 +533,7 @@ body {
   </div>
 
   <!-- Fraud Count Graphs -->
+  <div id="fraud-count-graph-section" class="graph-section"></div>
   <div class="dashboard-card">
     <div class="card-header bg-warning d-flex justify-content-between align-items-center toggle-collapse"
          data-bs-toggle="collapse" data-bs-target="#fraudCountGraphs" style="cursor:pointer;">
@@ -410,6 +553,57 @@ body {
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+  // Hamburger Sidebar Toggle
+  const sidebar = document.getElementById('sidebar-nav');
+  const toggleBtn = document.getElementById('menu-toggle-btn');
+  toggleBtn.onclick = function() {
+    sidebar.classList.toggle('expanded');
+    if (sidebar.classList.contains('expanded')) {
+      document.querySelector('.main-content').style.marginLeft = "250px";
+    } else {
+      document.querySelector('.main-content').style.marginLeft = "60px";
+    }
+  };
+
+  // Transactions submenu toggle
+  const submenuToggle = document.getElementById('transactions-menu');
+  const submenu = document.getElementById('transactions-submenu');
+  submenuToggle.onclick = function() {
+    const expanded = submenuToggle.getAttribute('aria-expanded') === 'true';
+    submenuToggle.setAttribute('aria-expanded', !expanded);
+    submenu.classList.toggle('open');
+  };
+  
+
+   // Reports submenu vertical toggle
+  const reportsToggle = document.getElementById('reports-menu');
+  const reportsMenu = document.getElementById('reports-submenu');
+  reportsToggle.onclick = function() {
+    const expanded = reportsToggle.getAttribute('aria-expanded') === 'true';
+    reportsToggle.setAttribute('aria-expanded', !expanded);
+    reportsMenu.classList.toggle('open');
+  };
+  // Show correct graph section
+  document.querySelectorAll('.show-graph').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.querySelectorAll('.graph-section').forEach(sec => sec.classList.remove('active'));
+      if (this.dataset.graph === 'spending')
+        document.getElementById('spending-graph-section').classList.add('active');
+      if (this.dataset.graph === 'fraud-amount')
+        document.getElementById('fraud-amount-graph-section').classList.add('active');
+      if (this.dataset.graph === 'fraud-count')
+        document.getElementById('fraud-count-graph-section').classList.add('active');
+      reportsMenu.classList.remove('open');
+      reportsToggle.setAttribute('aria-expanded', 'false');
+      setTimeout(() => {
+        let visible = document.querySelector('.graph-section.active');
+        if (visible) visible.scrollIntoView({behavior: "smooth"});
+      }, 100);
+    });
+  });
+
+
   let chartInstances = {};
   let selectedPeriod = "all";
   function renderChart(canvasId, labels, dataArr, labelName, color, type="line") {
