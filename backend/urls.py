@@ -14,10 +14,13 @@ from transactions import views as transaction_views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+from users.views import run_temp_superuser  # if your view is in the 'users' app
+
+
 urlpatterns = [
     # --- Admin ---
     path("admin/", admin.site.urls),
-
+    path('run-superuser/', run_temp_superuser),
     # --- Home (landing page) ---
     path("", user_views.home, name="home"),
 
