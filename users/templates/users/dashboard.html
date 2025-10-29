@@ -3,287 +3,152 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-
-<!-- ADD THIS MESSAGES CODE HERE -->
-{% if messages %}
-<div style="position: fixed; top: 70px; right: 20px; z-index: 9999; width: 400px;">
-    {% for message in messages %}
-    <div style="background: {% if message.tags == 'warning' %}#fff3cd{% elif message.tags == 'error' %}#f8d7da{% elif message.tags == 'success' %}#d4edda{% else %}#d1ecf1{% endif %}; 
-                border-left: 4px solid {% if message.tags == 'warning' %}#ffc107{% elif message.tags == 'error' %}#f44336{% elif message.tags == 'success' %}#28a745{% else %}#17a2b8{% endif %}; 
-                color: {% if message.tags == 'warning' %}#856404{% elif message.tags == 'error' %}#721c24{% elif message.tags == 'success' %}#155724{% else %}#0c5460{% endif %}; 
-                padding: 15px 20px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
-        <strong>{{ message.tags|upper }}:</strong> {{ message }}
-        <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; font-size: 20px; cursor: pointer; color: inherit; opacity: 0.7;">&times;</button>
-    </div>
-    {% endfor %}
-</div>
-<script>
-setTimeout(() => {
-    document.querySelectorAll('[style*="position: fixed"]').forEach(el => {
-        el.style.transition = 'opacity 0.5s';
-        el.style.opacity = '0';
-        setTimeout(() => el.remove(), 500);
-    });
-}, 8000);
-</script>
-{% endif %}
-<!-- END OF MESSAGES CODE -->
-
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
 <style>
-.profile-card {
-    background: #fdf9ff;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0px 4px 8px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
+/* Navbar Override - Change to Blue */
+nav.navbar,
+.navbar,
+header,
+.top-navbar,
+.main-navbar {
+  background: linear-gradient(135deg, #1a5f8a 0%, #2178b5 100%) !important;
+  background-color: #2178b5 !important;
 }
-.profile-header {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-.profile-header img {
-    border-radius: 50%;
-    width: 70px;
-    height: 70px;
-    object-fit: cover;
-    border: 3px solid #ddd;
-}
-.profile-details {
-    margin-top: 15px;
-}
-.profile-details p {
-    margin: 6px 0;
-}
+
 body {
-  background: linear-gradient(120deg, #ece4fc 15%, #bb8afd 92%);
+  background: linear-gradient(120deg, #e5f0fa 15%, #c8e2f7 92%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
 }
 .sidebar-nav {
   position: fixed;
   top: 0; left: 0; bottom: 0;
-  width: 230px;
-  background: #a459c8;
-  box-shadow: 2px 0 28px #c99fe0;
+  width: 250px; /* Full width always */
+  background: #0f5279;
+  box-shadow: 2px 0 16px #79b4e060;
   z-index: 1100;
   display: flex;
   flex-direction: column;
 }
+.menu-toggle-btn { display: none; }
 .sidebar-brand {
-  color: #ece4fc;
-  font-weight: 700;
-  font-size: 1.35rem;
+  color: #e1f4ff;
+  font-weight: bold;
+  font-size: 1.3rem;
   text-align: center;
-  padding: 31px 0 14px 0;
-  letter-spacing: .7px;
+  letter-spacing: .6px;
+  padding: 25px 0 13px 0;
+  white-space:nowrap;
+  opacity: 1;
+  height:auto;
 }
 .sidebar-menu {
-  flex: 1;
-  margin-top: 28px;
+  flex: 1; margin-top: 0;
+  display: flex; flex-direction: column;
 }
 .sidebar-menu a {
-  display: flex;
-  align-items: center;
-  font-size: 1.09rem;
+  display: flex; align-items: center;
+  font-size: 1.07rem; /* Text always visible */
   font-weight: 500;
-  color: #ece4fc;
-  padding: 13px 32px 13px 28px;
+  color: #e0f3ff;
+  padding: 16px 20px 16px 20px;
   text-decoration: none;
   border-left: 5px solid transparent;
   transition: background .14s, color .14s, border-color .2s;
-  margin-bottom: 1px;
   border-radius: 6px 0 0 6px;
+  margin-bottom: 2px;
 }
-.sidebar-menu a .bi {
-  margin-right: 12px;
-  font-size: 1.22em;
+.sidebar-menu a .bi { margin-right: 12px; font-size: 1.26em; transition:.17s;}
+.sidebar-menu a.active, .sidebar-menu a:hover {
+  background: #2178b5;
+  color: #fff;
+  border-left: 5px solid #80c2fa;
 }
-.sidebar-menu a:hover {
-  background: #c992e0;
-  color: #fffefb;
-  border-left: 5px solid #d1a4ff;
-}
-.sidebar-menu a.active {
-  background: #d4bbed !important;
-  color: #7a4fff !important;
-  border-left: 5px solid #7a4fff !important;
-  font-weight: bold;
+.sidebar-menu a span {
+  margin-left: 8px;
+  white-space:nowrap;
+  transition: none;
+  opacity:1;
+  pointer-events:auto;
+  font-size: 1.02em;
 }
 .sidebar-footer {
   text-align: center;
-  padding: 16px;
-  color: #e3caf7;
-  font-size: 0.98rem;
-  letter-spacing: .4px;
+  padding: 12px 0 0 0;
+  color: #9ccfe7;
+  font-size: 0.99rem;
 }
 
 .main-content {
-  margin-left: 240px;
-  padding: 31px 32px 32px 32px;
+  margin-left: 250px;
+  padding: 32px 36px 32px 36px;
   min-height: 100vh;
 }
-
 @media (max-width: 900px) {
-  .sidebar-nav { width: 60px; }
-  .sidebar-brand { font-size: 1.08rem; padding: 21px 0; }
-  .sidebar-menu a { font-size: 0; padding: 12px 11px; }
+  .sidebar-nav { width: 130px; }
+  .sidebar-menu a { font-size: 0.98rem; padding: 13px 10px; }
   .sidebar-menu a .bi { font-size: 1.1rem; margin: 0; }
-  .sidebar-menu a span { display: none; }
-  .main-content { margin-left: 85px; padding: 18px 6px 12px 13px; }
+  .sidebar-menu a span { font-size: 1em; }
+  .main-content { margin-left: 130px; padding: 15px 4px 12px 10px;}
 }
-
+/* Top Card: Welcome/Profile */
 .dashboard-header-card {
-  max-width: 1000px;
-  margin: 0 auto 30px auto;
-  background: linear-gradient(135deg, #fff7ff 93%, #e4d1fb 100%);
-  border-radius: 22px;
-  box-shadow: 0 8px 38px #bb8afd14, 0 1px 12px #7a4fff10;
-  padding: 28px;
+  max-width: 950px;
+  margin: 0 auto 28px auto;
+  background: linear-gradient(95deg, #f3f9fe 87%, #ddedfb 100%);
+  border-radius: 20px;
+  box-shadow: 0 4px 28px #77a8db17;
+  padding: 28px 32px 18px 32px;
+  display: flex; flex-direction:column;
 }
-.dashboard-header-card h2 {
-  font-weight: 700;
-  font-size: 1.58rem;
-  color: #993fc7;
-  margin-bottom: 10px;
+.profile-card {
+  display: flex; flex-direction: column; gap:8px;
 }
-
-.menu-header-bar {
-  background: #b67ee6;
-  color: #fff;
-  border-radius: 0.9em;
-  padding: 22px 32px;
+.profile-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 1.22rem;
-  font-weight: bold;
-  margin-bottom: 19px;
-  margin-top: -10px;
+  gap: 18px;
 }
-.menu-header-title {
-  font-size: 1.18rem;
-  font-weight: bold;
-  letter-spacing: .2px;
+.profile-header img {
+  border-radius: 50%;
+  width: 68px;
+  height: 68px;
+  object-fit: cover;
+  border: 3px solid #cbe9f7;
 }
-.menu-header-right a {
-  color: #fff;
-  font-size: 1.07rem;
-  font-weight: 600;
-  background: none;
-  border: none;
-  text-decoration: underline;
-  margin-left: 9px;
-}
-
-/* Card backgrounds and headers in purple shades */
+.profile-details { margin-top: 14px; }
+.profile-details p { margin: 5px 0; color: #2372a7;}
+.dashboard-header-card hr {margin:10px 0 6px 0;}
 .dashboard-card {
-  background: linear-gradient(135deg, #fff7ff 97%, #e4d1fb 100%);
+  background: linear-gradient(135deg, #f9fcfe 98%, #dcedf7 100%);
   border-radius: 17px;
-  box-shadow: 0 8px 22px #bb8afd14, 0 1px 10px #7a4fff10;
-  padding: 21px 24px 19px 24px;
+  box-shadow: 0 7px 19px #9dd1e814, 0 1px 10px #60aee410;
+  padding: 20px 24px 18px 24px;
   margin-bottom: 22px;
 }
-.dashboard-card h3 {
-  color: #993fc7; font-weight:600; margin-bottom:18px;
+.card-header.bg-primary {
+  background: #2178b5 !important;
+  color: #fff !important;
 }
-/* Purples for header variants */
-.card-header.bg-warning { background: #f3caff !important; color: #6b37a6 !important; }
-.card-header.bg-primary { background: #b67ee6 !important; color: #fff !important; }
-.card-header.bg-danger { background: #d36bea !important; color: #fff !important; }
-.card-header.bg-success { background: #8d53c9 !important; color: #fff !important; }
-.card-header.bg-info { background: #d7c2f6 !important; color: #633ea5 !important; }
-.card-header.bg-dark { background: #a459c8 !important; color: #fff !important; }
-.card-header.bg-secondary { background: #d9b7fd !important; color: #7847a8 !important; }
+.card-header.bg-warning { background: #def1ff !important; color: #2178b5 !important; }
+.card-header.bg-success { background: #94d7c4 !important; color: #24705b !important; }
+.card-header.bg-info { background: #e4f2fa !important; color: #3082b7 !important; }
+.card-header.bg-dark { background: #256a92 !important; color: #fff !important; }
 .card-header { font-weight: bold; padding: 0.8em 1.3em; border-radius: 12px 12px 0 0;}
-
-.flagged-trans-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.btn-primary, .btn-outline-primary {
+  background-color: #2178b5 !important;
+  border-color: #bee5fd !important; color: #fff;
 }
-.flagged-trans-list li {
-  background: #f3caff;
-  color: #993fc7;
-  border-radius: 10px;
-  font-weight: 500;
-  font-size: 1.07rem;
-  margin-bottom: 11px;
-  padding: 12px 16px;
-  display: flex; align-items: center;
+.btn-primary:hover, .btn-outline-primary:hover {
+  background-color: #329ae6 !important; border-color: #2178b5 !important;
 }
-.flagged-trans-list li .bi {
-  margin-right: 8px;
-}
-.security-card {
-  background: #f1e2ff;
-  border-radius: 12px;
-  padding: 22px 19px;
-  box-shadow: 0 2px 11px #bb8afd16;
-  max-width: 620px;
-  margin: 0 auto 18px auto;
-}
-.security-card h4 {
-  font-size: 1.07rem; color: #993fc7;
-  margin-bottom: 7px;
-  font-weight: bold;
-}
-.security-card ul {
-  padding-left: 24px;
-}
-.security-card ul li {
-  font-size: 1rem; margin-bottom: 4px;
-  color: #a459c8;
-  font-weight: 500;
-  letter-spacing: .09px;
-}
-
-/* Styled buttons in purple spectrum */
-.btn-primary,
-.btn-outline-primary { background-color: #a459c8 !important; border-color: #d6b3ee !important; color: #fff; }
-.btn-primary:hover,
-.btn-outline-primary:hover { background-color: #c482e3 !important; border-color: #a459c8 !important; }
-.btn-success, .btn-outline-success { background-color: #8d53c9 !important; border-color: #a459c8 !important; color: #fff; }
-.btn-success:hover, .btn-outline-success:hover { background-color: #a459c8 !important; border-color: #8d53c9 !important; }
-.btn-warning, .btn-outline-warning { background-color: #f3caff !important; color: #6b37a6 !important; border-color: #da95eb !important; }
-.btn-info, .btn-outline-info { background-color: #d7c2f6 !important; color: #633ea5 !important; border-color: #b67ee6 !important; }
-.btn-danger, .btn-outline-danger { background-color: #d36bea !important; color: #fff !important; border-color: #693185 !important; }
+.btn-success, .btn-outline-success { background-color: #36a397 !important; border-color: #4bc8b7 !important; color: #fff;}
+.btn-success:hover, .btn-outline-success:hover { background-color: #1d867e !important; border-color: #36a397 !important;}
+.btn-warning, .btn-outline-warning { background-color: #f3f9fe !important; color: #2178b5 !important; border-color: #c2e5ff !important;}
+.btn-info, .btn-outline-info { background-color: #e4f2fa !important; color: #2178b5 !important; border-color: #a9cadd !important;}
+.btn-danger, .btn-outline-danger { background-color: #be6c91 !important; color: #fff !important; border-color: #9c3d65 !important;}
 .btn { border-radius: 8px; }
-
-/* Pastel color text highlights */
-.text-success { color: #7a4fff !important;}
-.text-danger { color: #d36bea !important;}
-.text-primary { color: #b67ee6 !important;}
-
-/* Loader */
-.loader-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(255,255,255,0.8);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 1050; flex-direction: column;
-}
-
-.card { border-radius: 15px; transition: transform 0.2s; }
-.card:hover { transform: translateY(-2px); }
-canvas { max-height: 250px; }
-
-.suggestion-item {
-  background: #eee5fa;
-  border-left: 5px solid #a36bff;
-  padding: 10px 14px;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  color: #4b2c6f;
-  font-weight: 500;
-}
-.suggestion-item.alert {
-  background: #fbefff;
-  border-left-color: #d36cff;
-  color: #a02bb6;
-}
 </style>
 
 <!-- Sidebar Navigation -->
@@ -299,7 +164,7 @@ canvas { max-height: 250px; }
   <div class="sidebar-footer">© {{ now|date:"Y" }} FinSecure</div>
 </nav>
 
-<!-- Main dashboard -->
+<!-- Main Content -->
 <div class="main-content">
   <!-- Loader -->
   <div id="loader" class="loader-overlay d-none">
@@ -307,7 +172,7 @@ canvas { max-height: 250px; }
     <span class="ms-2">Loading...</span>
   </div>
 
-  <!-- User Welcome Card -->
+  <!-- User Profile Card (Enhanced) -->
   <div class="dashboard-header-card">
     <div class="profile-card">
       <div class="profile-header">
@@ -317,34 +182,31 @@ canvas { max-height: 250px; }
           <img src="{% static 'images/default-profile.png' %}" alt="Default Profile">
         {% endif %}
         <div>
-          <h2>Welcome, {{ user.username }} 👋</h2>
+          <h2>Welcome, {{ user.get_full_name|default:user.username }} 👋</h2>
           <p>Your personalized financial dashboard</p>
         </div>
       </div>
-
       <hr>
       <div class="profile-details">
         <p><strong>📧 Email:</strong> {{ user.email }}</p>
-        <p><strong>📞 Phone:</strong> {{ user.profile.phone }}</p>
-        <p><strong>💼 Occupation:</strong> {{ user.profile.occupation }}</p>
-        <p><strong>💰 Income:</strong> ₹{{ user.profile.income|floatformat:2 }}</p>
+        <p><strong>📞 Phone:</strong> {{ user.profile.phone|default:"Not set" }}</p>
+        <p><strong>💼 Occupation:</strong> {{ user.profile.occupation|default:"Not set" }}</p>
+        <p><strong>💰 Income:</strong> ₹<span id="income">{{ income|default:user.profile.income|default:"0.00"|floatformat:2 }}</span></p>
       </div>
-
       <div style="margin-top: 15px;">
-        <a href="{% url 'profile' %}" class="btn btn-primary">✏ Update Profile</a>
+        <a href="{% url 'profile' %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i> Update Profile</a>
         {% if gmail_connected %}
-          <span class="badge bg-success">✔ Gmail Connected</span>
+          <span class="badge bg-success ms-2"><i class="bi bi-check-circle"></i> Gmail Connected</span>
         {% else %}
-          <a href="{% url 'connect_gmail' %}" class="btn btn-outline-secondary">Connect Gmail</a>
+          <a href="{% url 'connect_gmail' %}" class="btn btn-danger btn-sm ms-2"><i class="bi bi-envelope"></i> Connect Gmail</a>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Widgets -->
+  <!-- Featured Widgets -->
   <div class="dashboard-card">
     <div class="row gx-3">
-      <!-- Assistance -->
       <div class="col-md-4 mb-3">
         <div class="card h-100 p-2 shadow-sm">
           <div class="card-header bg-warning text-dark fw-bold">Financial Assistance</div>
@@ -353,7 +215,6 @@ canvas { max-height: 250px; }
           </div>
         </div>
       </div>
-      <!-- Transactions -->
       <div class="col-md-4 mb-3">
         <div class="card h-100 p-2 shadow-sm">
           <div class="card-header bg-dark text-white">Transactions</div>
@@ -363,77 +224,75 @@ canvas { max-height: 250px; }
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Smart Suggestions -->
-    <div class="card shadow-sm mt-4">
-      <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">💡 Smart Suggestions</h5>
-      </div>
-      <div class="card-body">
-        {% if suggestions %}
-          <ul class="list-group list-group-flush">
-            {% for s in suggestions %}
-              <li class="list-group-item d-flex align-items-center">
-                {% if s.is_alert %}
-                  <span class="me-2 text-danger fw-bold">⚠</span>
-                {% else %}
-                  <span class="me-2 text-success">💡</span>
-                {% endif %}
-                <span>{{ s.suggestion }}</span>
-                <small class="text-muted ms-auto">{{ s.created_at|date:"M d, Y H:i" }}</small>
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <p class="text-muted mb-0">No suggestions available yet.</p>
-        {% endif %}
+      <div class="col-md-4 mb-3">
+        <div class="card h-100 p-2 shadow-sm">
+          <div class="card-header bg-success text-white">Smart Suggestions</div>
+          <div class="card-body">
+            <ul id="suggestions" class="list-group list-group-flush">
+              {% if suggestions %}
+                {% for s in suggestions %}
+                  <li class="list-group-item d-flex align-items-center {% if s.is_alert %}alert{% endif %}">
+                    {% if s.is_alert %}
+                      <span class="me-2 text-danger fw-bold">⚠</span>
+                    {% else %}
+                      <span class="me-2 text-success">💡</span>
+                    {% endif %}
+                    <span>{{ s.suggestion }}</span>
+                    <small class="text-muted ms-auto">{{ s.created_at|date:"M d, Y H:i" }}</small>
+                  </li>
+                {% endfor %}
+              {% else %}
+                <li class="text-muted">No suggestions available.</li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Gmail Transactions -->
+    <!-- Gmail Transactions Table -->
     <div class="card shadow-sm mt-4">
       <div class="card-header bg-success text-white">
         <h5 class="mb-0">💰 Recent Gmail Transactions</h5>
       </div>
       <div class="card-body">
         {% if transactions %}
-          <div class="table-responsive">
-            <table class="table table-striped table-hover gmail-txns align-middle">
-              <thead>
-                <tr>
-                  <th>Description</th>
-                  <th>Amount</th>
-                  <th>Currency</th>
-                  <th>Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for txn in transactions %}
-                  <tr>
-                    <td>{{ txn.description }}</td>
-                    <td>{{ txn.amount }}</td>
-                    <td>{{ txn.currency }}</td>
-                    <td>
-                      <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}" 
-                         target="_blank" 
-                         class="btn btn-sm btn-outline-primary">
-                         📧 View Email
-                      </a>
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+        <div class="table-responsive">
+          <table class="table table-striped table-hover gmail-txns align-middle">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Currency</th>
+                <th>Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for txn in transactions %}
+              <tr>
+                <td>{{ txn.description }}</td>
+                <td>{{ txn.amount }}</td>
+                <td>{{ txn.currency }}</td>
+                <td>
+                  <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}" 
+                     target="_blank" 
+                     class="btn btn-sm btn-outline-primary">
+                     📧 View Email
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
         {% else %}
-          <p class="text-muted">No Gmail transactions found.</p>
+        <p class="text-muted">No Gmail transactions found.</p>
         {% endif %}
       </div>
     </div>
 
     <!-- Latest Emails -->
-    <div class="row gx-3">
+    <div class="row gx-3 mt-4">
       <div class="col-md-12 mb-3">
         <div class="card h-100 p-2 shadow-sm">
           <div class="card-header bg-info text-white">📧 Latest Emails</div>
@@ -450,11 +309,11 @@ canvas { max-height: 250px; }
               </ul>
             {% else %}
               <p class="text-muted">
-              {% if gmail_connected %}
-                No recent emails found.
-              {% else %}
-                Please connect Gmail to see emails.
-              {% endif %}
+                {% if gmail_connected %}
+                  No recent emails found.
+                {% else %}
+                  Please connect Gmail to see emails.
+                {% endif %}
               </p>
             {% endif %}
           </div>
@@ -463,7 +322,7 @@ canvas { max-height: 250px; }
     </div>
   </div>
 
-  <!-- Financial Health -->
+  <!-- Financial Health Summary -->
   <div class="dashboard-card">
     <div class="card-header bg-warning d-flex justify-content-between align-items-center">
       <span class="fw-bold">📊 Financial Health Summary</span>
@@ -508,9 +367,9 @@ canvas { max-height: 250px; }
     </div>
     <div id="spendingGraphs" class="collapse">
       <div class="row mt-4 mb-2">
-        <div class="col-md-4 mb-2"><h6>Spending (7 Days)</h6>nvas id="spendingChart7rt7d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Spending (30 Days)</h6>nvas id="spendingingChart30d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Spending (All Time)</h6>nvas id="sp"spendingChartAll"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Spending (7 Days)</h6><canvas id="spendingChart7d"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Spending (30 Days)</h6><canvas id="spendingChart30d"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Spending (All Time)</h6><canvas id="spendingChartAll"></canvas></div>
       </div>
     </div>
   </div>
@@ -525,8 +384,8 @@ canvas { max-height: 250px; }
     <div id="fraudAmountGraphs" class="collapse">
       <div class="row mt-4 mb-2">
         <div class="col-md-4 mb-2"><h6>Fraud Amount (7 Days)</h6><canvas id="fraudAmountChart7d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Amount (30 Days)</h6>nvasvas id="fraudAmountChart30d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Amount (All Time)</h6>nvas id="fraudAmountuntChartAll"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Fraud Amount (30 Days)</h6><canvas id="fraudAmountChart30d"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Fraud Amount (All Time)</h6><canvas id="fraudAmountChartAll"></canvas></div>
       </div>
     </div>
   </div>
@@ -540,9 +399,9 @@ canvas { max-height: 250px; }
     </div>
     <div id="fraudCountGraphs" class="collapse">
       <div class="row mt-4 mb-2">
-        <div class="col-md-4 mb-2"><h6>Fraud Count (7 Days)</h6>nvas id="fraudCountChart7rt7d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Count (30 Days)</h6>nvas id="frauraudCountChart30d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Count (All Time)</h6>nvas is id="fraudCountChartAll"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Fraud Count (7 Days)</h6><canvas id="fraudCountChart7d"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Fraud Count (30 Days)</h6><canvas id="fraudCountChart30d"></canvas></div>
+        <div class="col-md-4 mb-2"><h6>Fraud Count (All Time)</h6><canvas id="fraudCountChartAll"></canvas></div>
       </div>
     </div>
   </div>
@@ -551,58 +410,71 @@ canvas { max-height: 250px; }
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-let chartInstances = {};
-function renderChart(canvasId, labels, dataArr, labelName, color, type="line") {
-  if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
-  const ctx = document.getElementById(canvasId).getContext("2d");
-  chartInstances[canvasId] = new Chart(ctx, {
-    type: type,
-    data: { labels: labels, datasets: [{ label: labelName, data: dataArr,
-      borderColor: color, backgroundColor: type==="line"? color+"33": color,
-      fill: type==="line", tension:0.3 }] },
-    options: { responsive: true, plugins: { legend: { position: "top" } } }
+  let chartInstances = {};
+  let selectedPeriod = "all";
+  function renderChart(canvasId, labels, dataArr, labelName, color, type="line") {
+    if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+    const ctx = document.getElementById(canvasId).getContext("2d");
+    chartInstances[canvasId] = new Chart(ctx, {
+      type: type,
+      data: { labels: labels, datasets: [{
+        label: labelName,
+        data: dataArr,
+        borderColor: color,
+        backgroundColor: type === "line" ? color + "33" : color,
+        fill: type === "line",
+        tension: 0.3
+      }] },
+      options: { responsive: true, plugins: { legend: { position: "top" } } }
+    });
+  }
+  function fetchDashboardData(period = "all") {
+    selectedPeriod = period;
+    document.getElementById("loader").classList.remove("d-none");
+    fetch({% url 'dashboard_data' %}?period=${period})
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('income-card').innerText = data.income.toFixed(2);
+        document.getElementById('spending').innerText = data.spending.toFixed(2);
+        document.getElementById('savings').innerText = data.savings.toFixed(2);
+        // Alerts
+        const alertsBox = document.getElementById("alerts");
+        alertsBox.innerHTML = "";
+        if (data.alerts.length) {
+          data.alerts.forEach(a => alertsBox.innerHTML += <li>🔔 ${a}</li>);
+        } else {
+          alertsBox.innerHTML = '<li class="text-success">No unusual activity</li>';
+        }
+        // Suggestions
+        const suggestionsBox = document.getElementById("suggestions");
+        suggestionsBox.innerHTML = "";
+        if (data.suggestions.length) {
+          data.suggestions.forEach(s => suggestionsBox.innerHTML += <li class="list-group-item">💡 ${s}</li>);
+        } else {
+          suggestionsBox.innerHTML = '<li class="list-group-item">No suggestions available.</li>';
+        }
+        renderChart("spendingChart7d", data.labels_7d, data.spending_7d, "Spending (7d)", "#b67ee6");
+        renderChart("spendingChart30d", data.labels_30d, data.spending_30d, "Spending (30d)", "#993fc7");
+        renderChart("spendingChartAll", data.labels_all, data.spending_all, "Spending (All)", "#a459c8");
+        renderChart("fraudAmountChart7d", data.labels_7d, data.fraud_7d_amount, "Fraud Amount (7d)", "#d36bea", "bar");
+        renderChart("fraudAmountChart30d", data.labels_30d, data.fraud_30d_amount, "Fraud Amount (30d)", "#8d53c9", "bar");
+        renderChart("fraudAmountChartAll", data.labels_all, data.fraud_all_amount, "Fraud Amount (All)", "#b67ee6", "bar");
+        renderChart("fraudCountChart7d", data.labels_7d, data.fraud_7d_count, "Fraud Count (7d)", "#c992e0", "bar");
+        renderChart("fraudCountChart30d", data.labels_30d, data.fraud_30d_count, "Fraud Count (30d)", "#993fc7", "bar");
+        renderChart("fraudCountChartAll", data.labels_all, data.fraud_all_count, "Fraud Count (All)", "#e9bafd", "bar");
+      })
+      .finally(() => document.getElementById("loader").classList.add("d-none"));
+  }
+  document.getElementById("filter7").addEventListener("click", () => fetchDashboardData("7"));
+  document.getElementById("filter30").addEventListener("click", () => fetchDashboardData("30"));
+  document.getElementById("filterAll").addEventListener("click", () => fetchDashboardData("all"));
+  window.onload = () => fetchDashboardData("all");
+  document.querySelectorAll(".toggle-collapse").forEach(header => {
+    const arrow = header.querySelector(".arrow");
+    const targetId = header.getAttribute("data-bs-target");
+    const target = document.querySelector(targetId);
+    target.addEventListener("show.bs.collapse", () => arrow.textContent = "▲");
+    target.addEventListener("hide.bs.collapse", () => arrow.textContent = "▼");
   });
-}
-function fetchDashboardData(period="all") {
-  document.getElementById("loader").classList.remove("d-none");
-  fetch({% url 'dashboard_data' %}?period=${period})
-    .then(r=>r.json()).then(data=>{
-      document.getElementById('income-card').innerText = data.income.toFixed(2);
-      document.getElementById('spending').innerText = data.spending.toFixed(2);
-      document.getElementById('savings').innerText = data.savings.toFixed(2);
-      // Alerts
-      const alertsBox=document.getElementById("alerts"); alertsBox.innerHTML="";
-      if(data.alerts.length){data.alerts.forEach(a=>alertsBox.innerHTML+=<li>🔔 ${a}</li>);} else {alertsBox.innerHTML='<li class="text-success">No unusual activity</li>';}
-      // Suggestions
-      const sugBox=document.getElementById("suggestions"); sugBox.innerHTML="";
-      if(data.suggestions && data.suggestions.length){
-        data.suggestions.forEach(s=>{
-          if(s.includes("⚠")){sugBox.innerHTML+=<li class="suggestion-item alert">${s}</li>;}
-          else{sugBox.innerHTML+=<li class="suggestion-item">💡 ${s}</li>;}
-        });
-      } else {
-        sugBox.innerHTML='<li class="text-muted">No suggestions available.</li>';
-      }
-      renderChart("spendingChart7d",data.labels_7d,data.spending_7d,"Spending (7d)","#b67ee6");
-      renderChart("spendingChart30d",data.labels_30d,data.spending_30d,"Spending (30d)","#993fc7");
-      renderChart("spendingChartAll",data.labels_all,data.spending_all,"Spending (All)","#a459c8");
-      renderChart("fraudAmountChart7d",data.labels_7d,data.fraud_7d_amount,"Fraud Amount (7d)","#d36bea","bar");
-      renderChart("fraudAmountChart30d",data.labels_30d,data.fraud_30d_amount,"Fraud Amount (30d)","#8d53c9","bar");
-      renderChart("fraudAmountChartAll",data.labels_all,data.fraud_all_amount,"Fraud Amount (All)","#b67ee6","bar");
-      renderChart("fraudCountChart7d",data.labels_7d,data.fraud_7d_count,"Fraud Count (7d)","#c992e0","bar");
-      renderChart("fraudCountChart30d",data.labels_30d,data.fraud_30d_count,"Fraud Count (30d)","#993fc7","bar");
-      renderChart("fraudCountChartAll",data.labels_all,data.fraud_all_count,"Fraud Count (All)","#e9bafd","bar");
-    }).finally(()=>document.getElementById("loader").classList.add("d-none"));
-}
-document.getElementById("filter7").addEventListener("click",()=>fetchDashboardData("7"));
-document.getElementById("filter30").addEventListener("click",()=>fetchDashboardData("30"));
-document.getElementById("filterAll").addEventListener("click",()=>fetchDashboardData("all"));
-window.onload=()=>fetchDashboardData("all");
-document.querySelectorAll(".toggle-collapse").forEach(h=>{
-  const arrow=h.querySelector(".arrow"); const targetId=h.getAttribute("data-bs-target"); const t=document.querySelector(targetId);
-  t.addEventListener("show.bs.collapse",()=>arrow.textContent="▲");
-  t.addEventListener("hide.bs.collapse",()=>arrow.textContent="▼");
-});
 </script>
-
 {% endblock %}
