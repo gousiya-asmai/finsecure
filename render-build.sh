@@ -16,3 +16,8 @@ echo "🎨 Collecting static files..."
 python manage.py collectstatic --noinput
 
 echo "✅ Build completed successfully!"
+
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput
+# Other commands...
