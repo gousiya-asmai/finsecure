@@ -235,7 +235,6 @@ body {
 .graph-section { display: none; }
 .graph-section.active { display: block; }
 
-/* For vertical submenu under Reports (inherits your existing sidebar style) */
 .sidebar-menu .submenu-vertical {
   display: none;
   background: #165e88;
@@ -372,13 +371,23 @@ body {
               {% if suggestions %}
                 {% for s in suggestions %}
                   <li class="list-group-item d-flex align-items-center {% if s.is_alert %}alert{% endif %}">
-                    {% if s.is_alert %}
-                      <span class="me-2 text-danger fw-bold">⚠</span>
+                    {% comment %}
+                      s might be:
+                        - a string (older code) -> display s
+                        - an object/dict with keys suggestion/is_alert/created_at
+                    {% endcomment %}
+                    {% if s.suggestion %}
+                      {% if s.is_alert %}
+                        <span class="me-2 text-danger fw-bold">⚠</span>
+                      {% else %}
+                        <span class="me-2 text-success">💡</span>
+                      {% endif %}
+                      <span>{{ s.suggestion }}</span>
+                      <small class="text-muted ms-auto">{{ s.created_at|date:"M d, Y H:i" }}</small>
                     {% else %}
                       <span class="me-2 text-success">💡</span>
+                      <span>{{ s }}</span>
                     {% endif %}
-                    <span>{{ s.suggestion }}</span>
-                    <small class="text-muted ms-auto">{{ s.created_at|date:"M d, Y H:i" }}</small>
                   </li>
                 {% endfor %}
               {% else %}
@@ -396,7 +405,7 @@ body {
         <h5 class="mb-0">💰 Recent Gmail Transactions</h5>
       </div>
       <div class="card-body">
-        {% if transactions %}
+        {% if gmail_transactions %}
         <div class="table-responsive">
           <table class="table table-striped table-hover gmail-txns align-middle">
             <thead>
@@ -408,17 +417,21 @@ body {
               </tr>
             </thead>
             <tbody>
-              {% for txn in transactions %}
+              {% for txn in gmail_transactions %}
               <tr>
                 <td>{{ txn.description }}</td>
                 <td>{{ txn.amount }}</td>
-                <td>{{ txn.currency }}</td>
+                <td>{{ txn.currency|default:"INR" }}</td>
                 <td>
+                  {% if txn.message_id %}
                   <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}" 
                      target="_blank" 
                      class="btn btn-sm btn-outline-primary">
                      📧 View Email
                   </a>
+                  {% else %}
+                    <span class="text-muted">No message link</span>
+                  {% endif %}
                 </td>
               </tr>
               {% endfor %}
@@ -553,49 +566,67 @@ body {
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  // Hamburger Sidebar Toggle
+  // Sidebar toggle (safe guards)
   const sidebar = document.getElementById('sidebar-nav');
   const toggleBtn = document.getElementById('menu-toggle-btn');
-  toggleBtn.onclick = function() {
-    sidebar.classList.toggle('expanded');
-    if (sidebar.classList.contains('expanded')) {
-      document.querySelector('.main-content').style.marginLeft = "250px";
-    } else {
-      document.querySelector('.main-content').style.marginLeft = "60px";
-    }
-  };
+  if (toggleBtn && sidebar) {
+    toggleBtn.onclick = function() {
+      sidebar.classList.toggle('expanded');
+      const main = document.querySelector('.main-content');
+      if (main) {
+        if (sidebar.classList.contains('expanded')) {
+          main.style.marginLeft = "250px";
+        } else {
+          main.style.marginLeft = "60px";
+        }
+      }
+    };
+  }
 
   // Transactions submenu toggle
   const submenuToggle = document.getElementById('transactions-menu');
   const submenu = document.getElementById('transactions-submenu');
-  submenuToggle.onclick = function() {
-    const expanded = submenuToggle.getAttribute('aria-expanded') === 'true';
-    submenuToggle.setAttribute('aria-expanded', !expanded);
-    submenu.classList.toggle('open');
-  };
-  
+  if (submenuToggle && submenu) {
+    submenuToggle.onclick = function() {
+      const expanded = submenuToggle.getAttribute('aria-expanded') === 'true';
+      submenuToggle.setAttribute('aria-expanded', (!expanded).toString());
+      submenu.classList.toggle('open');
+    };
+  }
 
-   // Reports submenu vertical toggle
+  // Reports submenu vertical toggle
   const reportsToggle = document.getElementById('reports-menu');
   const reportsMenu = document.getElementById('reports-submenu');
-  reportsToggle.onclick = function() {
-    const expanded = reportsToggle.getAttribute('aria-expanded') === 'true';
-    reportsToggle.setAttribute('aria-expanded', !expanded);
-    reportsMenu.classList.toggle('open');
-  };
-  // Show correct graph section
+  if (reportsToggle && reportsMenu) {
+    reportsToggle.onclick = function() {
+      const expanded = reportsToggle.getAttribute('aria-expanded') === 'true';
+      reportsToggle.setAttribute('aria-expanded', (!expanded).toString());
+      reportsMenu.classList.toggle('open');
+    };
+  }
+
+  // Show graph section links
   document.querySelectorAll('.show-graph').forEach(link => {
     link.addEventListener('click', function(e) {
       e.preventDefault();
       document.querySelectorAll('.graph-section').forEach(sec => sec.classList.remove('active'));
-      if (this.dataset.graph === 'spending')
-        document.getElementById('spending-graph-section').classList.add('active');
-      if (this.dataset.graph === 'fraud-amount')
-        document.getElementById('fraud-amount-graph-section').classList.add('active');
-      if (this.dataset.graph === 'fraud-count')
-        document.getElementById('fraud-count-graph-section').classList.add('active');
-      reportsMenu.classList.remove('open');
-      reportsToggle.setAttribute('aria-expanded', 'false');
+      // mapping: data-graph values are 'spending', 'fraud-amount', 'fraud-count'
+      if (this.dataset.graph === 'spending') {
+        const el = document.getElementById('spending-graph-section');
+        if (el) el.classList.add('active');
+      }
+      if (this.dataset.graph === 'fraud-amount') {
+        const el = document.getElementById('fraud-amount-graph-section');
+        if (el) el.classList.add('active');
+      }
+      if (this.dataset.graph === 'fraud-count') {
+        const el = document.getElementById('fraud-count-graph-section');
+        if (el) el.classList.add('active');
+      }
+      if (reportsMenu) {
+        reportsMenu.classList.remove('open');
+        reportsToggle.setAttribute('aria-expanded', 'false');
+      }
       setTimeout(() => {
         let visible = document.querySelector('.graph-section.active');
         if (visible) visible.scrollIntoView({behavior: "smooth"});
@@ -603,72 +634,203 @@ body {
     });
   });
 
-
+  // Charts storage so we can destroy and re-create
   let chartInstances = {};
-  let selectedPeriod = "all";
+
   function renderChart(canvasId, labels, dataArr, labelName, color, type="line") {
-    if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
-    const ctx = document.getElementById(canvasId).getContext("2d");
-    chartInstances[canvasId] = new Chart(ctx, {
-      type: type,
-      data: { labels: labels, datasets: [{
-        label: labelName,
-        data: dataArr,
-        borderColor: color,
-        backgroundColor: type === "line" ? color + "33" : color,
-        fill: type === "line",
-        tension: 0.3
-      }] },
-      options: { responsive: true, plugins: { legend: { position: "top" } } }
+    try {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+      const ctx = canvas.getContext("2d");
+      chartInstances[canvasId] = new Chart(ctx, {
+        type: type,
+        data: {
+          labels: labels,
+          datasets: [{
+            label: labelName,
+            data: dataArr,
+            borderColor: color || undefined,
+            backgroundColor: type === "line" ? undefined : (color || undefined),
+            fill: type === "line",
+            tension: 0.3
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: "top" } } }
+      });
+    } catch (err) {
+      console.error("renderChart error:", err, canvasId, labels, dataArr);
+    }
+  }
+
+  // Helper: safe parse numbers (handles strings from JSON)
+  function toNumberArr(arr) {
+    return arr.map(x => {
+      if (x === null || x === undefined) return 0;
+      if (typeof x === 'number') return x;
+      const n = parseFloat(x);
+      return isNaN(n) ? 0 : n;
     });
   }
+
+  // Core fetch function - uses the users view name 'get_dashboard_data'
   function fetchDashboardData(period = "all") {
-    selectedPeriod = period;
-    document.getElementById("loader").classList.remove("d-none");
-    fetch({% url 'dashboard_data' %}?period=${period})
-      .then(response => response.json())
+    document.getElementById("loader")?.classList.remove("d-none");
+    // Correct URL name: use get_dashboard_data (your users/urls.py registers this)
+    fetch("{% url 'get_dashboard_data' %}?period=" + encodeURIComponent(period))
+      .then(response => {
+        if (!response.ok) throw new Error("Network response was not ok: " + response.status);
+        return response.json();
+      })
       .then(data => {
-        document.getElementById('income-card').innerText = data.income.toFixed(2);
-        document.getElementById('spending').innerText = data.spending.toFixed(2);
-        document.getElementById('savings').innerText = data.savings.toFixed(2);
+        // Some backends return floats, some strings; coerce numbers safely
+        const income = (data.income !== undefined) ? Number(data.income) : 0;
+        const spending = (data.spending !== undefined) ? Number(data.spending) : 0;
+        const savings = (data.savings !== undefined) ? Number(data.savings) : (income - spending);
+
+        // Update summary cards (check multiple possible element IDs)
+        const incomeEls = [document.getElementById('income-card'), document.getElementById('income')].filter(Boolean);
+        incomeEls.forEach(el => el.innerText = income.toFixed(2));
+
+        const spendingEls = [document.getElementById('spending'), document.getElementById('spending-card')].filter(Boolean);
+        spendingEls.forEach(el => el.innerText = spending.toFixed(2));
+
+        const savingsEls = [document.getElementById('savings')].filter(Boolean);
+        savingsEls.forEach(el => el.innerText = savings.toFixed(2));
+
         // Alerts
         const alertsBox = document.getElementById("alerts");
-        alertsBox.innerHTML = "";
-        if (data.alerts.length) {
-          data.alerts.forEach(a => alertsBox.innerHTML += '<li>🔔 ${a}</li>');
-        } else {
-          alertsBox.innerHTML = '<li class="text-success">No unusual activity</li>';
+        if (alertsBox) {
+          alertsBox.innerHTML = "";
+          if (Array.isArray(data.alerts) && data.alerts.length) {
+            data.alerts.forEach(a => {
+              alertsBox.innerHTML += `<li>🔔 ${a}</li>`;
+            });
+          } else {
+            alertsBox.innerHTML = `<li class="text-success">No unusual activity</li>`;
+          }
         }
-        // Suggestions
+
+        // Suggestions (if backend includes suggestions)
         const suggestionsBox = document.getElementById("suggestions");
-        suggestionsBox.innerHTML = "";
-        if (data.suggestions.length) {
-          data.suggestions.forEach(s => suggestionsBox.innerHTML += '<li class="list-group-item">💡 ${s}</li>');
-        } else {
-          suggestionsBox.innerHTML = '<li class="list-group-item">No suggestions available.</li>';
+        if (suggestionsBox) {
+          suggestionsBox.innerHTML = "";
+          if (Array.isArray(data.suggestions) && data.suggestions.length) {
+            data.suggestions.forEach(s => {
+              suggestionsBox.innerHTML += `<li class="list-group-item">💡 ${ (s.suggestion) ? s.suggestion : s }</li>`;
+            });
+          } else {
+            // If template passed suggestions already from server-side context, don't override with empty
+            if (suggestionsBox.children.length === 0) {
+              suggestionsBox.innerHTML = '<li class="list-group-item">No suggestions available.</li>';
+            }
+          }
         }
-        renderChart("spendingChart7d", data.labels_7d, data.spending_7d, "Spending (7d)", "#b67ee6");
-        renderChart("spendingChart30d", data.labels_30d, data.spending_30d, "Spending (30d)", "#993fc7");
-        renderChart("spendingChartAll", data.labels_all, data.spending_all, "Spending (All)", "#a459c8");
-        renderChart("fraudAmountChart7d", data.labels_7d, data.fraud_7d_amount, "Fraud Amount (7d)", "#d36bea", "bar");
-        renderChart("fraudAmountChart30d", data.labels_30d, data.fraud_30d_amount, "Fraud Amount (30d)", "#8d53c9", "bar");
-        renderChart("fraudAmountChartAll", data.labels_all, data.fraud_all_amount, "Fraud Amount (All)", "#b67ee6", "bar");
-        renderChart("fraudCountChart7d", data.labels_7d, data.fraud_7d_count, "Fraud Count (7d)", "#c992e0", "bar");
-        renderChart("fraudCountChart30d", data.labels_30d, data.fraud_30d_count, "Fraud Count (30d)", "#993fc7", "bar");
-        renderChart("fraudCountChartAll", data.labels_all, data.fraud_all_count, "Fraud Count (All)", "#e9bafd", "bar");
+
+        // Prepare data for charts.
+        // Priority: if backend returns labels_* and spending_* arrays, use them (time series).
+        // Fallback: use category_spending (category totals) and fraud_stats for doughnut/bar charts.
+
+        // Spending charts
+        if (data.labels_7d && data.spending_7d) {
+          renderChart("spendingChart7d", data.labels_7d, toNumberArr(data.spending_7d), "Spending (7d)", "#7193e6", "line");
+        } else if (data.category_spending) {
+          // If no time-series, populate category totals into the 7d chart as fallback
+          const cats = data.category_spending.map(x => x.category || "Uncategorized");
+          const totals = toNumberArr(data.category_spending.map(x => x.total));
+          renderChart("spendingChart7d", cats, totals, "Spending by Category", "#7193e6", "bar");
+        } else {
+          // Clear chart if empty
+          renderChart("spendingChart7d", [], [], "Spending (7d)", "#7193e6", "bar");
+        }
+
+        if (data.labels_30d && data.spending_30d) {
+          renderChart("spendingChart30d", data.labels_30d, toNumberArr(data.spending_30d), "Spending (30d)", "#8f6ee0", "line");
+        } else {
+          renderChart("spendingChart30d", [], [], "Spending (30d)", "#8f6ee0", "bar");
+        }
+
+        if (data.labels_all && data.spending_all) {
+          renderChart("spendingChartAll", data.labels_all, toNumberArr(data.spending_all), "Spending (All)", "#a459c8", "line");
+        } else {
+          // fallback to category totals
+          if (data.category_spending) {
+            const cats = data.category_spending.map(x => x.category || "Uncategorized");
+            const totals = toNumberArr(data.category_spending.map(x => x.total));
+            renderChart("spendingChartAll", cats, totals, "Spending (All)", "#a459c8", "bar");
+          } else {
+            renderChart("spendingChartAll", [], [], "Spending (All)", "#a459c8", "bar");
+          }
+        }
+
+        // Fraud amount charts (if backend provides fraud series)
+        if (data.fraud_7d_amount) {
+          renderChart("fraudAmountChart7d", data.labels_7d || [], toNumberArr(data.fraud_7d_amount), "Fraud Amount (7d)", "#d36bea", "bar");
+        } else {
+          renderChart("fraudAmountChart7d", [], [], "Fraud Amount (7d)", "#d36bea", "bar");
+        }
+        if (data.fraud_30d_amount) {
+          renderChart("fraudAmountChart30d", data.labels_30d || [], toNumberArr(data.fraud_30d_amount), "Fraud Amount (30d)", "#8d53c9", "bar");
+        } else {
+          renderChart("fraudAmountChart30d", [], [], "Fraud Amount (30d)", "#8d53c9", "bar");
+        }
+        if (data.fraud_all_amount) {
+          renderChart("fraudAmountChartAll", data.labels_all || [], toNumberArr(data.fraud_all_amount), "Fraud Amount (All)", "#b67ee6", "bar");
+        } else {
+          renderChart("fraudAmountChartAll", [], [], "Fraud Amount (All)", "#b67ee6", "bar");
+        }
+
+        // Fraud count: backend likely returns fraud_stats (array of {is_fraud: ... , count: ...})
+        if (Array.isArray(data.fraud_stats) && data.fraud_stats.length) {
+          // order: fraud true first, then false
+          const fraudRow = data.fraud_stats.find(r => String(r.is_fraud) === "True" || r.is_fraud === true) || {count:0};
+          const nonFraudRow = data.fraud_stats.find(r => String(r.is_fraud) === "False" || r.is_fraud === false) || {count:0};
+          const labels = ["Fraud", "Non-Fraud"];
+          const counts = [Number(fraudRow.count || 0), Number(nonFraudRow.count || 0)];
+          renderChart("fraudCountChart7d", labels, counts, "Fraud Count (count)", "#c992e0", "bar");
+          renderChart("fraudCountChart30d", labels, counts, "Fraud Count (count)", "#993fc7", "bar");
+          renderChart("fraudCountChartAll", labels, counts, "Fraud Count (count)", "#e9bafd", "bar");
+          // also draw a compact fraud doughnut for the 'fraudAmountChart' area if desired
+          renderChart("fraudAmountChart", labels, counts, "Fraud vs Non-Fraud", "#d36bea", "doughnut");
+        } else {
+          // If backend provided counts differently, try 'fraud_counts' keys (fallback)
+          renderChart("fraudCountChart7d", [], [], "Fraud Count (7d)", "#c992e0", "bar");
+          renderChart("fraudCountChart30d", [], [], "Fraud Count (30d)", "#993fc7", "bar");
+          renderChart("fraudCountChartAll", [], [], "Fraud Count (All)", "#e9bafd", "bar");
+        }
       })
-      .finally(() => document.getElementById("loader").classList.add("d-none"));
+      .catch(err => {
+        console.error("Error loading dashboard data:", err);
+        const alertsBox = document.getElementById("alerts");
+        if (alertsBox) alertsBox.innerHTML = `<li class="text-danger">Error loading dashboard data</li>`;
+      })
+      .finally(() => {
+        document.getElementById("loader")?.classList.add("d-none");
+      });
   }
-  document.getElementById("filter7").addEventListener("click", () => fetchDashboardData("7"));
-  document.getElementById("filter30").addEventListener("click", () => fetchDashboardData("30"));
-  document.getElementById("filterAll").addEventListener("click", () => fetchDashboardData("all"));
-  window.onload = () => fetchDashboardData("all");
+
+  // Wire up filter buttons safely
+  const btn7 = document.getElementById("filter7");
+  const btn30 = document.getElementById("filter30");
+  const btnAll = document.getElementById("filterAll");
+  if (btn7) btn7.addEventListener("click", () => fetchDashboardData("7"));
+  if (btn30) btn30.addEventListener("click", () => fetchDashboardData("30"));
+  if (btnAll) btnAll.addEventListener("click", () => fetchDashboardData("all"));
+
+  // Toggle collapse arrows (Bootstrap collapse events assumed present)
   document.querySelectorAll(".toggle-collapse").forEach(header => {
     const arrow = header.querySelector(".arrow");
     const targetId = header.getAttribute("data-bs-target");
     const target = document.querySelector(targetId);
-    target.addEventListener("show.bs.collapse", () => arrow.textContent = "▲");
-    target.addEventListener("hide.bs.collapse", () => arrow.textContent = "▼");
+    if (!target) return;
+    // if bootstrap loaded, these events will be available; if not, ignore
+    try {
+      target.addEventListener("show.bs.collapse", () => arrow.textContent = "▲");
+      target.addEventListener("hide.bs.collapse", () => arrow.textContent = "▼");
+    } catch (e) { /* ignore if bootstrap not loaded */ }
   });
+
+  // initial load
+  window.addEventListener("load", () => fetchDashboardData("all"));
 </script>
 {% endblock %}

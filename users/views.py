@@ -226,6 +226,20 @@ from transactions.models import Transaction
 
 
 # ------------------- Dashboard Page -------------------
+from decimal import Decimal
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from django.db.models import Sum, Count
+from django.utils import timezone
+
+# Import your models
+from .models import UserProfile
+from assistance.models import SmartSuggestion
+from transactions.models import Transaction
+
+
 @login_required(login_url="login")
 def dashboard_view(request):
     """
@@ -237,7 +251,7 @@ def dashboard_view(request):
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
         # Warn if profile incomplete
-        if not profile.is_complete():
+        if hasattr(profile, "is_complete") and not profile.is_complete():
             messages.warning(request, "⚠️ Your profile is incomplete. Please update it.")
 
         # Session-based Gmail data
@@ -248,7 +262,7 @@ def dashboard_view(request):
 
         # Get stored smart suggestions
         suggestions_qs = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")[:5]
-        suggestions = [s.suggestion_text for s in suggestions_qs] if suggestions_qs.exists() else []
+        suggestions = [s.suggestion for s in suggestions_qs] if suggestions_qs.exists() else []
 
         context = {
             "profile": profile,
@@ -264,7 +278,7 @@ def dashboard_view(request):
 
     except Exception as e:
         print("❌ Dashboard error:", e)
-        messages.error(request, f"Something went wrong loading your dashboard: {str(e)}")
+        messages.error(request, f"Something went wrong loading your dashboard.")
         return redirect("home")
 
 
@@ -275,48 +289,64 @@ def get_dashboard_data(request):
     Returns transaction summary data (income, spending, savings, alerts)
     for the logged-in user as JSON. Used by frontend dashboard via AJAX.
     """
-    user = request.user
-    transactions = Transaction.objects.filter(user=user)
+    try:
+        user = request.user
+        transactions = Transaction.objects.filter(user=user)
 
-    # Filter by period (optional)
-    period = request.GET.get("period", "all")
-    if period == "7":
-        start_date = timezone.now() - timezone.timedelta(days=7)
-        transactions = transactions.filter(timestamp__gte=start_date)
-    elif period == "30":
-        start_date = timezone.now() - timezone.timedelta(days=30)
-        transactions = transactions.filter(timestamp__gte=start_date)
+        # Filter by period (optional)
+        period = request.GET.get("period", "all")
+        if period == "7":
+            start_date = timezone.now() - timezone.timedelta(days=7)
+            transactions = transactions.filter(timestamp__gte=start_date)
+        elif period == "30":
+            start_date = timezone.now() - timezone.timedelta(days=30)
+            transactions = transactions.filter(timestamp__gte=start_date)
 
-    # Aggregations
-    total_spending = transactions.filter(transaction_type="debit").aggregate(Sum("amount"))["amount__sum"] or Decimal("0.0")
-    total_income = transactions.filter(transaction_type="credit").aggregate(Sum("amount"))["amount__sum"] or Decimal("0.0")
-    savings = total_income - total_spending
+        # Aggregations
+        total_spending = (
+            transactions.filter(transaction_type="debit").aggregate(Sum("amount"))["amount__sum"]
+            or Decimal("0.0")
+        )
+        total_income = (
+            transactions.filter(transaction_type="credit").aggregate(Sum("amount"))["amount__sum"]
+            or Decimal("0.0")
+        )
+        savings = total_income - total_spending
 
-    # Alerts logic
-    alerts = []
-    if total_income > 0 and total_spending > Decimal("0.7") * total_income:
-        alerts.append("⚠️ High spending: over 70% of your income.")
-    if savings < 0:
-        alerts.append("⚠️ Overspending: savings are negative.")
-    fraud_count = transactions.filter(is_fraud=True).count()
-    if fraud_count:
-        alerts.append(f"⚠️ {fraud_count} fraud transactions detected!")
+        # Alerts logic
+        alerts = []
+        if total_income > 0 and total_spending > Decimal("0.7") * total_income:
+            alerts.append("⚠️ High spending: over 70% of your income.")
+        if savings < 0:
+            alerts.append("⚠️ Overspending: savings are negative.")
+        fraud_count = transactions.filter(is_fraud=True).count()
+        if fraud_count:
+            alerts.append(f"⚠️ {fraud_count} fraud transactions detected!")
 
-    # Category spending and fraud stats
-    category_spending = list(
-        transactions.filter(transaction_type="debit").values("category").annotate(total=Sum("amount"))
-    )
-    fraud_stats = list(transactions.values("is_fraud").annotate(count=Count("id")))
+        # Category spending and fraud stats
+        category_spending = list(
+            transactions.filter(transaction_type="debit")
+            .values("category")
+            .annotate(total=Sum("amount"))
+        )
+        fraud_stats = list(transactions.values("is_fraud").annotate(count=Count("id")))
 
-    # Return as JSON
-    return JsonResponse({
-        "income": float(total_income),
-        "spending": float(total_spending),
-        "savings": float(savings),
-        "alerts": alerts,
-        "category_spending": category_spending,
-        "fraud_stats": fraud_stats,
-    })
+        # Return as JSON
+        return JsonResponse(
+            {
+                "income": float(total_income),
+                "spending": float(total_spending),
+                "savings": float(savings),
+                "alerts": alerts,
+                "category_spending": category_spending,
+                "fraud_stats": fraud_stats,
+            },
+            safe=False,
+        )
+
+    except Exception as e:
+        print("❌ Error in get_dashboard_data:", e)
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: finance-dashboard
+    env: python
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+    startCommand: gunicorn backend.wsgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: backend.settings
+      - key: PYTHON_VERSION
+        value: 3.11.9
