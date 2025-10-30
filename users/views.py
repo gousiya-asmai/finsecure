@@ -219,142 +219,108 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, redirect
 
-
-from transactions.models import Transaction
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.db.models import Sum, Count
-from transactions.models import Transaction
-from datetime import datetime, timedelta
 from .models import UserProfile
 from assistance.models import SmartSuggestion
-from django.db import models
 
+from transactions.models import Transaction
 
 
 # ------------------- Dashboard Page -------------------
 
-@login_required
-def dashboard(request):
-    user = request.user
-
-    # Basic context for template
-    transactions = Transaction.objects.filter(user=user)
-    income = transactions.filter(type='income').aggregate(Sum('amount'))['amount__sum'] or 0
-    spending = transactions.filter(type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
-    savings = income - spending
-
-    # Fraud stats (basic)
-    fraud_stats = list(
-        transactions.values('is_fraud')
-        .annotate(count=Count('id'))
-        .order_by('is_fraud')
-    )
-
-    context = {
-        'income': income,
-        'spending': spending,
-        'savings': savings,
-        'fraud_stats': fraud_stats,
-    }
-    return render(request, 'users/dashboard.html', context)
 
 
 @login_required
 def get_dashboard_data(request):
-    user = request.user
-    period = request.GET.get('period', 'all')
+    """
+    Returns dashboard transaction summaries (income, spending, savings, fraud, categories)
+    as JSON for dynamic dashboard graphs.
+    """
+    try:
+        user = request.user
+        transactions = Transaction.objects.filter(user=user)
 
-    today = datetime.today()
-    if period == "7":
-        start_date = today - timedelta(days=7)
-    elif period == "30":
-        start_date = today - timedelta(days=30)
-    else:
-        start_date = None
+        now = timezone.now()
+        last_7_days = now - timezone.timedelta(days=7)
+        last_30_days = now - timezone.timedelta(days=30)
 
-    # Filtered transactions
-    txns = Transaction.objects.filter(user=user)
-    if start_date:
-        txns = txns.filter(date__gte=start_date)
+        # --- Total income, spending, savings ---
+        total_income = (
+            transactions.filter(transaction_type="credit").aggregate(Sum("amount"))["amount__sum"]
+            or Decimal("0.0")
+        )
+        total_spending = (
+            transactions.filter(transaction_type="debit").aggregate(Sum("amount"))["amount__sum"]
+            or Decimal("0.0")
+        )
+        savings = total_income - total_spending
 
-    # Aggregate values
-    income = txns.filter(type='income').aggregate(Sum('amount'))['amount__sum'] or 0
-    spending = txns.filter(type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
-    savings = income - spending
+        # --- Fraud Amount Aggregates ---
+        fraud_7d_amount = (
+            transactions.filter(is_fraud=True, timestamp__gte=last_7_days)
+            .aggregate(Sum("amount"))["amount__sum"]
+            or Decimal("0.0")
+        )
+        fraud_30d_amount = (
+            transactions.filter(is_fraud=True, timestamp__gte=last_30_days)
+            .aggregate(Sum("amount"))["amount__sum"]
+            or Decimal("0.0")
+        )
+        fraud_all_amount = (
+            transactions.filter(is_fraud=True)
+            .aggregate(Sum("amount"))["amount__sum"]
+            or Decimal("0.0")
+        )
 
-    # Fraud detection
-    fraud_txns = txns.filter(is_fraud=True)
-    nonfraud_txns = txns.filter(is_fraud=False)
+        # --- Fraud Count Stats ---
+        fraud_7d_count = transactions.filter(is_fraud=True, timestamp__gte=last_7_days).count()
+        fraud_30d_count = transactions.filter(is_fraud=True, timestamp__gte=last_30_days).count()
+        fraud_all_count = transactions.filter(is_fraud=True).count()
 
-    # Group fraud amount by day for charts
-    def fraud_amount_series(queryset, days):
-        labels, values = [], []
-        for i in range(days):
-            day = today - timedelta(days=i)
-            total = queryset.filter(date__date=day.date()).aggregate(Sum('amount'))['amount__sum'] or 0
-            labels.append(day.strftime("%b %d"))
-            values.append(float(total))
-        labels.reverse()
-        values.reverse()
-        return labels, values
+        # --- Spending by Category ---
+        category_spending = list(
+            transactions.filter(transaction_type="debit")
+            .values("category")
+            .annotate(total=Sum("amount"))
+            .order_by("-total")
+        )
 
-    # Fraud amount arrays for each period
-    labels_7d, fraud_7d_amount = fraud_amount_series(fraud_txns, 7)
-    labels_30d, fraud_30d_amount = fraud_amount_series(fraud_txns, 30)
+        # --- Fraud vs Non-Fraud Count ---
+        fraud_stats = list(transactions.values("is_fraud").annotate(count=Count("id")))
 
-    # All-time fraud data (category sum or by month)
-    fraud_by_month = (
-        fraud_txns
-        .annotate(month=models.functions.TruncMonth('date'))
-        .values('month')
-        .annotate(total=Sum('amount'))
-        .order_by('month')
-    )
-    labels_all = [d['month'].strftime("%b %Y") for d in fraud_by_month]
-    fraud_all_amount = [float(d['total']) for d in fraud_by_month]
+        # --- Alerts ---
+        alerts = []
+        if total_income > 0 and total_spending > Decimal("0.7") * total_income:
+            alerts.append("⚠️ High spending: over 70% of your income.")
+        if savings < 0:
+            alerts.append("⚠️ Overspending: your savings are negative.")
+        if fraud_all_count > 0:
+            alerts.append(f"🚨 {fraud_all_count} potential fraud transactions detected.")
 
-    # Fraud count summary
-    fraud_stats = list(
-        txns.values('is_fraud')
-        .annotate(count=Count('id'))
-        .order_by('is_fraud')
-    )
+        # --- Prepare JSON Response ---
+        return JsonResponse(
+            {
+                "income": float(total_income),
+                "spending": float(total_spending),
+                "savings": float(savings),
+                "alerts": alerts,
+                "category_spending": category_spending,
+                "fraud_stats": fraud_stats,
 
-    # Alerts
-    alerts = []
-    if spending > income * 0.8:
-        alerts.append("High spending relative to income.")
-    if fraud_txns.exists():
-        alerts.append(f"{fraud_txns.count()} suspicious transactions detected.")
+                # ✅ New Fraud Amount + Count fields
+                "fraud_7d_amount": float(fraud_7d_amount),
+                "fraud_30d_amount": float(fraud_30d_amount),
+                "fraud_all_amount": float(fraud_all_amount),
+                "fraud_7d_count": fraud_7d_count,
+                "fraud_30d_count": fraud_30d_count,
+                "fraud_all_count": fraud_all_count,
+            },
+            safe=False,
+        )
 
-    # Category spending for fallback graph
-    category_spending = list(
-        txns.filter(type='expense')
-        .values('category')
-        .annotate(total=Sum('amount'))
-        .order_by('-total')
-    )
+    except Exception as e:
+        print("❌ Error in get_dashboard_data:", e)
+        return JsonResponse({"error": str(e)}, status=500)
 
-    data = {
-        "income": float(income),
-        "spending": float(spending),
-        "savings": float(savings),
-        "alerts": alerts,
-        "fraud_stats": fraud_stats,
-        "category_spending": category_spending,
-
-        # Fraud amount chart data
-        "labels_7d": labels_7d,
-        "fraud_7d_amount": fraud_7d_amount,
-        "labels_30d": labels_30d,
-        "fraud_30d_amount": fraud_30d_amount,
-        "labels_all": labels_all,
-        "fraud_all_amount": fraud_all_amount,
-    }
-
-    return JsonResponse(data)
 
 # ------------------- Connect Gmail -------------------
 @login_required
