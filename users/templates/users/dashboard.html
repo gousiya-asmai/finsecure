@@ -311,6 +311,9 @@ body {
         <i class="bi bi-cash-coin"></i><span>Transactions</span>
         <span class="submenu-arrow bi bi-chevron-right"></span>
       </button>
+      <button id="theme-toggle" class="btn btn-outline-secondary">
+        <i class="bi bi-moon"></i> Dark Mode
+      </button>
       <div class="submenu" id="transactions-submenu">
         <a href="{% url 'transactions:add' %}"><i class="bi bi-plus-circle"></i><span>Add Transaction</span></a>
         <a href="{% url 'transactions:list' %}"><i class="bi bi-list-ul"></i><span>View All</span></a>
