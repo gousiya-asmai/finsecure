@@ -219,7 +219,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, redirect
 
-from .models import UserProfile, SmartSuggestion
+from .models import UserProfile
+from assistance.models import SmartSuggestion
+
 from transactions.models import Transaction
 
 
