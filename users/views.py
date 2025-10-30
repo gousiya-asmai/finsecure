@@ -238,6 +238,7 @@ from assistance.models import SmartSuggestion
 
 from transactions.models import Transaction  # adjust if your Transaction model lives elsewhere
 
+from users.utils import fetch_latest_emails, fetch_recent_transactions, save_transactions_to_db
 
 @login_required(login_url="login")
 def dashboard_view(request):
