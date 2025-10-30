@@ -233,7 +233,9 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Sum, Count
 from django.utils import timezone
-from .models import UserProfile, SmartSuggestion
+from .models import UserProfile
+from assistance.models import SmartSuggestion
+
 from transactions.models import Transaction  # adjust if your Transaction model lives elsewhere
 
 
