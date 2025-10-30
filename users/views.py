@@ -227,41 +227,26 @@ def update_email_view(request):
 @login_required(login_url="login")
 def dashboard_view(request):
     """
-    Display the user dashboard with profile info, Gmail connection status,
-    latest emails, transactions, and smart suggestions.
+    Display the user dashboard with live Gmail + transaction data.
     """
     try:
-        # --- Ensure the user profile exists ---
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
-        # --- Warn if profile incomplete ---
         if not profile.is_complete():
             messages.warning(request, "⚠️ Your profile is incomplete. Please update it.")
 
-        # --- Gmail Connection ---
-        gmail_connected = request.session.get("gmail_connected", False)
-        connected_gmail = request.session.get("connected_gmail")
+        # ✅ Fetch live Gmail data instead of using session
+        from users.utils import fetch_latest_emails, fetch_recent_transactions, save_transactions_to_db
 
-        # --- Gmail data (emails + transactions) ---
-        latest_emails = request.session.get("latest_emails", [])
-        gmail_transactions = request.session.get("gmail_transactions", [])
+        latest_emails = fetch_latest_emails(request.user, max_results=5)
+        gmail_transactions = fetch_recent_transactions(request.user, max_results=25)
+        if gmail_transactions:
+            save_transactions_to_db(request.user, gmail_transactions)
+            gmail_connected = True
+        else:
+            gmail_connected = False
 
-        # 🔁 Fetch Gmail data fresh if connected but empty
-        if gmail_connected and not latest_emails:
-            latest_emails = fetch_latest_emails(request.user)
-            request.session["latest_emails"] = latest_emails
-
-        if gmail_connected and not gmail_transactions:
-            gmail_transactions = fetch_recent_transactions(request.user)
-            request.session["gmail_transactions"] = gmail_transactions
-
-            # Optional: save to DB for fraud/suggestion analysis
-            try:
-                save_transactions_to_db(request.user, gmail_transactions)
-            except Exception as e:
-                print("⚠️ Could not save Gmail transactions:", e)
-
-        # --- Smart Suggestions ---
+        # Smart Suggestions
         suggestions_qs = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")[:5]
         suggestions = [
             {
@@ -272,12 +257,10 @@ def dashboard_view(request):
             for s in suggestions_qs
         ]
 
-        # --- Context ---
         context = {
             "profile": profile,
             "income": profile.income or 0.0,
             "gmail_connected": gmail_connected,
-            "connected_gmail": connected_gmail,
             "latest_emails": latest_emails,
             "gmail_transactions": gmail_transactions,
             "suggestions": suggestions,
@@ -289,6 +272,7 @@ def dashboard_view(request):
         print("❌ Dashboard error:", e)
         messages.error(request, f"Something went wrong loading your dashboard: {str(e)}")
         return redirect("home")
+
 
 
 # =========================================================
