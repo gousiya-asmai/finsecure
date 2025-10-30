@@ -211,18 +211,7 @@ def update_email_view(request):
 # ------------------- Dashboard -------------------
 
 
-from decimal import Decimal
-from django.db.models import Sum, Count
-from django.utils import timezone
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.shortcuts import render, redirect
 
-from .models import UserProfile
-from assistance.models import SmartSuggestion
-
-from transactions.models import Transaction
 
 
 # ------------------- Dashboard Page -------------------
@@ -233,13 +222,19 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Sum, Count
 from django.utils import timezone
+
 from .models import UserProfile
 from assistance.models import SmartSuggestion
+from transactions.models import Transaction
+from users.utils import (
+    fetch_latest_emails,
+    fetch_recent_transactions,
+    save_transactions_to_db,
+)
 
-from transactions.models import Transaction  # adjust if your Transaction model lives elsewhere
-
-from users.utils import fetch_latest_emails, fetch_recent_transactions, save_transactions_to_db
-
+# =========================================================
+# DASHBOARD VIEW
+# =========================================================
 @login_required(login_url="login")
 def dashboard_view(request):
     """
@@ -247,18 +242,37 @@ def dashboard_view(request):
     latest emails, transactions, and smart suggestions.
     """
     try:
+        # --- Ensure the user profile exists ---
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
-        # Warn if profile incomplete
+        # --- Warn if profile incomplete ---
         if not profile.is_complete():
             messages.warning(request, "⚠️ Your profile is incomplete. Please update it.")
 
+        # --- Gmail Connection ---
         gmail_connected = request.session.get("gmail_connected", False)
         connected_gmail = request.session.get("connected_gmail")
+
+        # --- Gmail data (emails + transactions) ---
         latest_emails = request.session.get("latest_emails", [])
         gmail_transactions = request.session.get("gmail_transactions", [])
 
-        # Smart suggestions
+        # 🔁 Fetch Gmail data fresh if connected but empty
+        if gmail_connected and not latest_emails:
+            latest_emails = fetch_latest_emails(request.user)
+            request.session["latest_emails"] = latest_emails
+
+        if gmail_connected and not gmail_transactions:
+            gmail_transactions = fetch_recent_transactions(request.user)
+            request.session["gmail_transactions"] = gmail_transactions
+
+            # Optional: save to DB for fraud/suggestion analysis
+            try:
+                save_transactions_to_db(request.user, gmail_transactions)
+            except Exception as e:
+                print("⚠️ Could not save Gmail transactions:", e)
+
+        # --- Smart Suggestions ---
         suggestions_qs = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")[:5]
         suggestions = [
             {
@@ -269,6 +283,7 @@ def dashboard_view(request):
             for s in suggestions_qs
         ]
 
+        # --- Context ---
         context = {
             "profile": profile,
             "income": profile.income or 0.0,
@@ -278,6 +293,7 @@ def dashboard_view(request):
             "gmail_transactions": gmail_transactions,
             "suggestions": suggestions,
         }
+
         return render(request, "users/dashboard.html", context)
 
     except Exception as e:
@@ -286,7 +302,9 @@ def dashboard_view(request):
         return redirect("home")
 
 
-# ------------------- AJAX DATA ENDPOINT -------------------
+# =========================================================
+# AJAX DASHBOARD DATA (for charts)
+# =========================================================
 @login_required
 def get_dashboard_data(request):
     """
@@ -297,7 +315,7 @@ def get_dashboard_data(request):
     period = request.GET.get("period", "all")
     transactions = Transaction.objects.filter(user=user)
 
-    # Filter by period
+    # --- Filter by period ---
     if period == "7":
         start_date = timezone.now() - timezone.timedelta(days=7)
         transactions = transactions.filter(timestamp__gte=start_date)
@@ -305,12 +323,12 @@ def get_dashboard_data(request):
         start_date = timezone.now() - timezone.timedelta(days=30)
         transactions = transactions.filter(timestamp__gte=start_date)
 
-    # Totals
+    # --- Totals ---
     total_income = transactions.filter(transaction_type="credit").aggregate(Sum("amount"))["amount__sum"] or Decimal("0.0")
     total_spending = transactions.filter(transaction_type="debit").aggregate(Sum("amount"))["amount__sum"] or Decimal("0.0")
     savings = total_income - total_spending
 
-    # Alerts
+    # --- Alerts ---
     alerts = []
     if total_income > 0 and total_spending > Decimal("0.7") * total_income:
         alerts.append("⚠️ High spending: over 70% of your income.")
@@ -320,7 +338,7 @@ def get_dashboard_data(request):
     if fraud_count:
         alerts.append(f"⚠️ {fraud_count} fraud transactions detected!")
 
-    # Category spending (for bar charts)
+    # --- Category Spending (bar chart) ---
     category_spending = list(
         transactions.filter(transaction_type="debit")
         .values("category")
@@ -328,33 +346,34 @@ def get_dashboard_data(request):
         .order_by("-total")
     )
 
-    # Fraud stats (for count chart)
+    # --- Fraud Stats (count chart) ---
     fraud_stats = list(
         transactions.values("is_fraud")
         .annotate(count=Count("id"))
         .order_by("-is_fraud")
     )
 
-    # Time-series (for line charts)
-    labels = []
-    spending_values = []
-    fraud_amount_values = []
+    # --- Time-Series (line chart) ---
     now = timezone.now()
+    labels_7d, spending_7d = [], []
+    labels_30d, spending_30d = [], []
+    labels_all, spending_all = [], []
 
-    # Prepare 7d, 30d, all-time buckets
     for days in [7, 30, 90]:
         start = now - timezone.timedelta(days=days)
         qs = transactions.filter(timestamp__gte=start)
-        # aggregate by day
+
         daily_data = (
             qs.filter(transaction_type="debit")
-            .extra(select={'day': "date(timestamp)"})
+            .extra(select={"day": "date(timestamp)"})
             .values("day")
             .annotate(total=Sum("amount"))
             .order_by("day")
         )
+
         labels_list = [d["day"].strftime("%b %d") for d in daily_data]
         values_list = [float(d["total"]) for d in daily_data]
+
         if days == 7:
             labels_7d, spending_7d = labels_list, values_list
         elif days == 30:
@@ -362,10 +381,10 @@ def get_dashboard_data(request):
         else:
             labels_all, spending_all = labels_list, values_list
 
-    # Fraud amount series
+    # --- Fraud amount over time (line chart) ---
     fraud_qs = transactions.filter(is_fraud=True)
     fraud_daily = (
-        fraud_qs.extra(select={'day': "date(timestamp)"})
+        fraud_qs.extra(select={"day": "date(timestamp)"})
         .values("day")
         .annotate(total=Sum("amount"))
         .order_by("day")
@@ -373,7 +392,7 @@ def get_dashboard_data(request):
     fraud_labels = [d["day"].strftime("%b %d") for d in fraud_daily]
     fraud_amount = [float(d["total"]) for d in fraud_daily]
 
-    # Return JSON
+    # --- Return JSON ---
     return JsonResponse({
         "income": float(total_income),
         "spending": float(total_spending),
@@ -388,9 +407,8 @@ def get_dashboard_data(request):
         "labels_all": labels_all,
         "spending_all": spending_all,
         "fraud_labels": fraud_labels,
-        "fraud_7d_amount": fraud_amount,  # used for fraud amount charts
+        "fraud_7d_amount": fraud_amount,
     })
-
 
 
 # ------------------- Connect Gmail -------------------
