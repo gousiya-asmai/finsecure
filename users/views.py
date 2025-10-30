@@ -37,6 +37,11 @@ from users.utils import (
 from users.forms import UserUpdateForm, ProfileUpdateForm
 from django.http import HttpResponse
 
+
+from decimal import Decimal
+
+
+
 # ------------------- Home -------------------
 def home(request):
     return render(request, "users/home.html")
@@ -215,22 +220,6 @@ def update_email_view(request):
 
 
 # ------------------- Dashboard Page -------------------
-from decimal import Decimal
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import JsonResponse
-from django.db.models import Sum, Count
-from django.utils import timezone
-
-from .models import UserProfile
-from assistance.models import SmartSuggestion
-from transactions.models import Transaction
-from users.utils import (
-    fetch_latest_emails,
-    fetch_recent_transactions,
-    save_transactions_to_db,
-)
 
 # =========================================================
 # DASHBOARD VIEW
