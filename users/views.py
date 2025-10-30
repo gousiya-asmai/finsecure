@@ -226,6 +226,17 @@ from transactions.models import Transaction
 
 
 # ------------------- Dashboard Page -------------------
+from decimal import Decimal
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.db.models import Sum, Count
+from django.utils import timezone
+from .models import UserProfile, SmartSuggestion
+from transactions.models import Transaction  # adjust if your Transaction model lives elsewhere
+
+
 @login_required(login_url="login")
 def dashboard_view(request):
     """
@@ -233,22 +244,27 @@ def dashboard_view(request):
     latest emails, transactions, and smart suggestions.
     """
     try:
-        # Ensure the user has a profile
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
         # Warn if profile incomplete
         if not profile.is_complete():
             messages.warning(request, "⚠️ Your profile is incomplete. Please update it.")
 
-        # Session-based Gmail data
         gmail_connected = request.session.get("gmail_connected", False)
         connected_gmail = request.session.get("connected_gmail")
         latest_emails = request.session.get("latest_emails", [])
         gmail_transactions = request.session.get("gmail_transactions", [])
 
-        # Get stored smart suggestions
+        # Smart suggestions
         suggestions_qs = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")[:5]
-        suggestions = [s.suggestion_text for s in suggestions_qs] if suggestions_qs.exists() else []
+        suggestions = [
+            {
+                "suggestion": s.suggestion_text,
+                "is_alert": getattr(s, "is_alert", False),
+                "created_at": s.created_at,
+            }
+            for s in suggestions_qs
+        ]
 
         context = {
             "profile": profile,
@@ -259,7 +275,6 @@ def dashboard_view(request):
             "gmail_transactions": gmail_transactions,
             "suggestions": suggestions,
         }
-
         return render(request, "users/dashboard.html", context)
 
     except Exception as e:
@@ -268,18 +283,18 @@ def dashboard_view(request):
         return redirect("home")
 
 
-# ------------------- Dashboard Data (AJAX) -------------------
+# ------------------- AJAX DATA ENDPOINT -------------------
 @login_required
 def get_dashboard_data(request):
     """
-    Returns transaction summary data (income, spending, savings, alerts)
-    for the logged-in user as JSON. Used by frontend dashboard via AJAX.
+    Returns transaction summary data (income, spending, savings, fraud stats)
+    as JSON for the dashboard graphs.
     """
     user = request.user
+    period = request.GET.get("period", "all")
     transactions = Transaction.objects.filter(user=user)
 
-    # Filter by period (optional)
-    period = request.GET.get("period", "all")
+    # Filter by period
     if period == "7":
         start_date = timezone.now() - timezone.timedelta(days=7)
         transactions = transactions.filter(timestamp__gte=start_date)
@@ -287,28 +302,75 @@ def get_dashboard_data(request):
         start_date = timezone.now() - timezone.timedelta(days=30)
         transactions = transactions.filter(timestamp__gte=start_date)
 
-    # Aggregations
-    total_spending = transactions.filter(transaction_type="debit").aggregate(Sum("amount"))["amount__sum"] or Decimal("0.0")
+    # Totals
     total_income = transactions.filter(transaction_type="credit").aggregate(Sum("amount"))["amount__sum"] or Decimal("0.0")
+    total_spending = transactions.filter(transaction_type="debit").aggregate(Sum("amount"))["amount__sum"] or Decimal("0.0")
     savings = total_income - total_spending
 
-    # Alerts logic
+    # Alerts
     alerts = []
     if total_income > 0 and total_spending > Decimal("0.7") * total_income:
         alerts.append("⚠️ High spending: over 70% of your income.")
     if savings < 0:
-        alerts.append("⚠️ Overspending: savings are negative.")
+        alerts.append("⚠️ Overspending: negative savings.")
     fraud_count = transactions.filter(is_fraud=True).count()
     if fraud_count:
         alerts.append(f"⚠️ {fraud_count} fraud transactions detected!")
 
-    # Category spending and fraud stats
+    # Category spending (for bar charts)
     category_spending = list(
-        transactions.filter(transaction_type="debit").values("category").annotate(total=Sum("amount"))
+        transactions.filter(transaction_type="debit")
+        .values("category")
+        .annotate(total=Sum("amount"))
+        .order_by("-total")
     )
-    fraud_stats = list(transactions.values("is_fraud").annotate(count=Count("id")))
 
-    # Return as JSON
+    # Fraud stats (for count chart)
+    fraud_stats = list(
+        transactions.values("is_fraud")
+        .annotate(count=Count("id"))
+        .order_by("-is_fraud")
+    )
+
+    # Time-series (for line charts)
+    labels = []
+    spending_values = []
+    fraud_amount_values = []
+    now = timezone.now()
+
+    # Prepare 7d, 30d, all-time buckets
+    for days in [7, 30, 90]:
+        start = now - timezone.timedelta(days=days)
+        qs = transactions.filter(timestamp__gte=start)
+        # aggregate by day
+        daily_data = (
+            qs.filter(transaction_type="debit")
+            .extra(select={'day': "date(timestamp)"})
+            .values("day")
+            .annotate(total=Sum("amount"))
+            .order_by("day")
+        )
+        labels_list = [d["day"].strftime("%b %d") for d in daily_data]
+        values_list = [float(d["total"]) for d in daily_data]
+        if days == 7:
+            labels_7d, spending_7d = labels_list, values_list
+        elif days == 30:
+            labels_30d, spending_30d = labels_list, values_list
+        else:
+            labels_all, spending_all = labels_list, values_list
+
+    # Fraud amount series
+    fraud_qs = transactions.filter(is_fraud=True)
+    fraud_daily = (
+        fraud_qs.extra(select={'day': "date(timestamp)"})
+        .values("day")
+        .annotate(total=Sum("amount"))
+        .order_by("day")
+    )
+    fraud_labels = [d["day"].strftime("%b %d") for d in fraud_daily]
+    fraud_amount = [float(d["total"]) for d in fraud_daily]
+
+    # Return JSON
     return JsonResponse({
         "income": float(total_income),
         "spending": float(total_spending),
@@ -316,6 +378,14 @@ def get_dashboard_data(request):
         "alerts": alerts,
         "category_spending": category_spending,
         "fraud_stats": fraud_stats,
+        "labels_7d": labels_7d,
+        "spending_7d": spending_7d,
+        "labels_30d": labels_30d,
+        "spending_30d": spending_30d,
+        "labels_all": labels_all,
+        "spending_all": spending_all,
+        "fraud_labels": fraud_labels,
+        "fraud_7d_amount": fraud_amount,  # used for fraud amount charts
     })
 
 

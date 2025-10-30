@@ -265,38 +265,8 @@ body {
   margin-right: 10px;
   font-size: 1.18em;
 }
-
-:root {
-  --bg-main: #e5f0fa;
-  --bg-card: #f9fcfe;
-  --bg-sidebar: #0f5279;
-  --text-color: #222;
-  --card-shadow: 0 7px 19px #9dd1e814;
-}
-
-body.dark-mode {
-  --bg-main: #0f202d;
-  --bg-card: #1b2a3b;
-  --bg-sidebar: #102f46;
-  --text-color: #f0f4f8;
-  --card-shadow: 0 7px 19px #00000040;
-}
-
-/* Apply variables */
-body {
-  background: var(--bg-main);
-  color: var(--text-color);
-}
-.dashboard-card,
-.dashboard-header-card {
-  background: var(--bg-card);
-  box-shadow: var(--card-shadow);
-}
-.sidebar-nav {
-  background: var(--bg-sidebar);
-}
-
 </style>
+
 <!-- Sidebar Navigation -->
 <nav class="sidebar-nav" aria-label="Side Navigation" id="sidebar-nav">
   <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Expand/collapse sidebar">
@@ -310,9 +280,6 @@ body {
       <button class="submenu-toggle" id="transactions-menu" aria-expanded="false">
         <i class="bi bi-cash-coin"></i><span>Transactions</span>
         <span class="submenu-arrow bi bi-chevron-right"></span>
-      </button>
-      <button id="theme-toggle" class="btn btn-outline-secondary">
-        <i class="bi bi-moon"></i> Dark Mode
       </button>
       <div class="submenu" id="transactions-submenu">
         <a href="{% url 'transactions:add' %}"><i class="bi bi-plus-circle"></i><span>Add Transaction</span></a>
@@ -569,8 +536,7 @@ body {
       <span>⚠ Fraud Amount Graphs</span>
       <span class="arrow">▼</span>
     </div>
-    <div id="fraudAmountGraphs" class="collapse show">
-
+    <div id="fraudAmountGraphs" class="collapse">
       <div class="row mt-4 mb-2">
         <div class="col-md-4 mb-2"><h6>Fraud Amount (7 Days)</h6><canvas id="fraudAmountChart7d"></canvas></div>
         <div class="col-md-4 mb-2"><h6>Fraud Amount (30 Days)</h6><canvas id="fraudAmountChart30d"></canvas></div>
@@ -600,126 +566,6 @@ body {
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  <!-- ==================== THEME TOGGLE + DASHBOARD SCRIPT ==================== -->
-<script>
-// 🌙 Light/Dark mode toggle logic
-const themeBtn = document.getElementById('theme-toggle');
-
-if (themeBtn) {
-  const applyTheme = (dark) => {
-    document.body.classList.toggle('dark-mode', dark);
-    themeBtn.innerHTML = dark 
-      ? '<i class="bi bi-sun"></i> Light Mode' 
-      : '<i class="bi bi-moon"></i> Dark Mode';
-
-    // ✅ Update Chart.js text/axes color dynamically
-    Chart.defaults.color = dark ? '#fff' : '#000';
-  };
-
-  // Load previously saved theme
-  const saved = localStorage.getItem('darkMode') === 'true';
-  applyTheme(saved);
-
-  // Toggle on click
-  themeBtn.addEventListener('click', () => {
-    const isDark = document.body.classList.toggle('dark-mode');
-    localStorage.setItem('darkMode', isDark);
-    applyTheme(isDark);
-
-    // ✅ Re-render charts when theme changes
-    if (typeof loadDashboardData === "function") loadDashboardData();
-  });
-}
-
-
-// ==================== DASHBOARD CHARTS & DATA ==================== //
-async function loadDashboardData() {
-  try {
-    const response = await fetch("/users/dashboard-data/");
-    const data = await response.json();
-
-    // ✅ Ensure Chart.js uses current theme color
-    Chart.defaults.color = document.body.classList.contains('dark-mode') ? '#fff' : '#000';
-
-    // ---- Spending Chart ----
-    const ctx1 = document.getElementById("spendingChart").getContext("2d");
-    if (window.spendingChart) window.spendingChart.destroy();
-    window.spendingChart = new Chart(ctx1, {
-      type: "bar",
-      data: {
-        labels: data.category_spending.map(x => x.category),
-        datasets: [{
-          label: "💸 Spending by Category",
-          data: data.category_spending.map(x => x.total),
-          backgroundColor: "rgba(255, 99, 132, 0.6)",
-          borderRadius: 8,
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { labels: { color: Chart.defaults.color } } },
-        scales: {
-          x: { ticks: { color: Chart.defaults.color } },
-          y: { ticks: { color: Chart.defaults.color } }
-        }
-      }
-    });
-
-    // ---- Fraud Chart ----
-    const ctx2 = document.getElementById("fraudChart").getContext("2d");
-    if (window.fraudChart) window.fraudChart.destroy();
-    window.fraudChart = new Chart(ctx2, {
-      type: "doughnut",
-      data: {
-        labels: data.fraud_stats.map(x => x.is_fraud ? "Fraud" : "Legit"),
-        datasets: [{
-          label: "⚠️ Fraud Detection",
-          data: data.fraud_stats.map(x => x.count),
-          backgroundColor: ["rgba(255, 99, 132, 0.8)", "rgba(75, 192, 192, 0.8)"],
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { labels: { color: Chart.defaults.color } } }
-      }
-    });
-
-    // ---- Savings Chart ----
-    const ctx3 = document.getElementById("savingsChart").getContext("2d");
-    if (window.savingsChart) window.savingsChart.destroy();
-    window.savingsChart = new Chart(ctx3, {
-      type: "line",
-      data: {
-        labels: ["Income", "Spending", "Savings"],
-        datasets: [{
-          label: "💰 Financial Summary",
-          data: [data.income, data.spending, data.savings],
-          borderColor: "rgba(54, 162, 235, 0.8)",
-          backgroundColor: "rgba(54, 162, 235, 0.2)",
-          tension: 0.3,
-          fill: true,
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { labels: { color: Chart.defaults.color } } },
-        scales: {
-          x: { ticks: { color: Chart.defaults.color } },
-          y: { ticks: { color: Chart.defaults.color } }
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error("❌ Error loading dashboard data:", error);
-  }
-}
-
-// Load data when the page is ready
-window.addEventListener("load", loadDashboardData);
-</script>
-<!-- ==================== END DASHBOARD SCRIPT ==================== -->
-
   // Sidebar toggle (safe guards)
   const sidebar = document.getElementById('sidebar-nav');
   const toggleBtn = document.getElementById('menu-toggle-btn');
@@ -985,6 +831,6 @@ window.addEventListener("load", loadDashboardData);
   });
 
   // initial load
-  window.addEventListener("load", () => fetchDashboardData("all"));
+ if (typeof fetchDashboardData === "function") fetchDashboardData("all");;
 </script>
 {% endblock %}
