@@ -5,313 +5,159 @@
 {% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
+<!--
+  Corrected dashboard.html
+  - Fix: fraud doughnut canvas added (id="fraudDoughnut") and JS renders it.
+  - Adds Light / Dark mode toggle and CSS variables.
+  - Spending charts show line + bar datasets.
+  - Safe guards for missing data and broken network responses.
+-->
+
 <style>
-/* Navbar Override - Change to Blue */
-nav.navbar,
-.navbar,
-header,
-.top-navbar,
-.main-navbar {
-  background: linear-gradient(135deg, #1a5f8a 0%, #2178b5 100%) !important;
-  background-color: #2178b5 !important;
+:root{
+  --bg: #e5f0fa;
+  --panel: #f9fcfe;
+  --accent: #2178b5;
+  --muted: #2372a7;
+  --card-shadow: rgba(96,174,228,0.06);
+  --text: #08384f;
+  --positive: #2b8a4a;
+  --negative: #b33a3a;
+}
+[data-theme="dark"]{
+  --bg: #071226;
+  --panel: #071a2b;
+  --accent: #3aa0ff;
+  --muted: #8fcaf2;
+  --card-shadow: rgba(0,0,0,0.6);
+  --text: #d7eefc;
+  --positive: #7dd291;
+  --negative: #f28b82;
 }
 
-body {
-  background: linear-gradient(120deg, #e5f0fa 15%, #c8e2f7 92%);
+/* Basic layout */
+body { 
+  background: linear-gradient(120deg,var(--bg) 15%, #c8e2f7 92%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  margin: 0;
-}
-.sidebar-nav {
-  position: fixed;
-  top: 0; left: 0; bottom: 0;
-  width: 250px; /* Full width always */
-  background: #0f5279;
-  box-shadow: 2px 0 16px #79b4e060;
-  z-index: 1100;
-  display: flex;
-  flex-direction: column;
-  transition: width .20s cubic-bezier(.4,2,.6,1);
-
-}
-.sidebar-nav.expanded { width: 250px; }
-.menu-toggle-btn {
-  background: none;
-  border: none;
-  color: #e1f4ff;
-  font-size: 2rem;
-  padding: 24px 0 19px 0;
-  text-align: center;
-  cursor: pointer;
-  outline: none;
-  margin-bottom: 4px;
-  display: block;
+  color: var(--text);
+  margin:0;
 }
 
-
-.sidebar-brand {
-  color: #e1f4ff;
-  font-weight: bold;
-  font-size: 1.3rem;
-  text-align: center;
-  letter-spacing: .6px;
-  padding:  0 0 13px 0;
-  white-space:nowrap;
-  opacity: 0;
-  height:0;
-  transition: opacity .18s, height .18s;
-
+/* Sidebar */
+.sidebar-nav{
+  position: fixed; top:0; left:0; bottom:0;
+  width: 250px;
+  background: linear-gradient(180deg,#0d4f73 0%, #0f5279 100%);
+  color: #eaf7ff;
+  z-index:1100;
+  display:flex; flex-direction:column;
+  transition: width .18s;
+  box-shadow: 2px 0 16px var(--card-shadow);
 }
-.sidebar-nav.expanded .sidebar-brand { opacity:1; height:auto; padding-top:25px;}
-.sidebar-menu {
-  flex: 1; margin-top: 0;
-  display: flex; flex-direction: column;
+.sidebar-nav.collapsed { width: 60px; }
+.menu-toggle-btn{
+  background:none; border:none; color:inherit;
+  font-size:1.5rem; padding:18px; cursor:pointer;
 }
-.sidebar-menu a,
-.sidebar-menu .submenu-toggle {
-  display: flex; align-items: center;
-  font-size: 0;
-  font-weight: 500;
-  color: #e0f3ff;
-  padding: 16px 20px 16px 20px;
-  text-decoration: none;
-  border-left: 5px solid transparent;
-  transition: background .14s, color .14s, border-color .2s, font-size .18s, padding .18s;
-  border-radius: 6px 0 0 6px;
-  margin-bottom: 2px;
-  cursor: pointer;
-  background: none;
-  border: none;
-  outline: none;
+.sidebar-brand{ font-weight:700; text-align:center; padding:12px 8px; }
+.sidebar-menu { display:flex; flex-direction:column; gap:6px; padding: 6px; }
+.sidebar-menu a, .submenu-toggle{
+  display:flex; align-items:center; gap:10px;
+  padding:12px 14px; color:inherit; text-decoration:none;
+  border-radius:8px; transition: background .12s;
 }
+.sidebar-menu a:hover, .submenu-toggle:hover { background: rgba(255,255,255,0.04); }
+.sidebar-footer{ margin-top:auto; padding:12px; font-size:.9rem; color:#cfeefc; text-align:center; }
 
-
-.sidebar-menu a .bi,
-.sidebar-menu .submenu-toggle .bi { margin-right: 0; font-size: 1.26em;}
-.sidebar-menu a.active, .sidebar-menu a:hover,
-.sidebar-menu .submenu-toggle.active, .sidebar-menu .submenu-toggle:hover {
-  background: #2178b5;
-  color: #fff;
-  border-left: 5px solid #80c2fa;
+/* Main area */
+.main-content{
+  margin-left:250px; padding:28px; transition:margin-left .18s;
 }
+.sidebar-nav.collapsed ~ .main-content { margin-left:60px; }
 
-.sidebar-menu a span,
-.sidebar-menu .submenu-toggle span {
-  margin-left: 8px;
-  white-space:nowrap;
-  transition: opacity .17s;
-  opacity:0;
-  pointer-events:none;
-  font-size: 1.02em;
+/* Cards */
+.dashboard-card, .card {
+  background: var(--panel);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px var(--card-shadow);
+  padding:18px;
+  margin-bottom:20px;
 }
+.dashboard-header-card{ padding:20px; border-radius:18px; max-width:1000px; margin:0 auto 20px; }
+.profile-header{ display:flex; gap:16px; align-items:center; }
+.profile-header img{ border-radius:50%; width:64px; height:64px; object-fit:cover; border:3px solid rgba(203,233,247,0.7); }
 
+/* Buttons */
+.btn { border-radius:8px; }
+.btn-primary{ background:var(--accent); border: none; color: white; }
+.btn-outline-primary{ background: transparent; border:1px solid rgba(0,0,0,0.06); color:var(--accent); }
 
-
-.sidebar-nav.expanded .sidebar-menu a,
-.sidebar-nav.expanded .sidebar-menu .submenu-toggle{
-  font-size: 1.07rem;
-  padding: 14px 32px 14px 26px;
-}
-.sidebar-nav.expanded .sidebar-menu a span,
-.sidebar-nav.expanded .sidebar-menu .submenu-toggle span {
-  opacity:1; pointer-events:auto;
+/* Responsive */
+@media (max-width: 900px){
+  .sidebar-nav { transform: translateX(-100%); position: fixed; }
+  .sidebar-nav.open { transform: translateX(0); }
+  .main-content{ margin-left: 0; padding:18px; }
 }
 
-/* Submenu styles */
-.sidebar-menu .submenu {
-  max-height: 0;
-  overflow: hidden;
-  background: #165e88;
-  transition: max-height 0.27s cubic-bezier(.4,2,.6,1);
-  margin-left: 0;
-  padding-left: 0;
-}
-.sidebar-menu .submenu.open {
-  max-height: 180px;
-}
-.sidebar-menu .submenu a {
-  font-size: 0;
-  padding: 14px 32px 14px 56px;
-  border-radius: 6px 0 0 6px;
-  border-left: 3px solid #0f5279 !important;
-  color: #cbe8fc;
-  background: none;
-  margin-bottom: 0;
-}
-.sidebar-nav.expanded .sidebar-menu .submenu a {
-  font-size: 1rem;
-}
-.sidebar-menu .submenu a.active, .sidebar-menu .submenu a:hover {
-  background: #2178b5;
-  color: #fff;
-  border-left: 3px solid #80c2fa !important;
-}
-.sidebar-menu .submenu-arrow {
-  margin-left: auto;
-  transition: transform 0.2s;
-}
-.sidebar-menu .submenu-toggle[aria-expanded="true"] .submenu-arrow {
-  transform: rotate(90deg);
-}
+/* Graph placeholders */
+canvas { width:100% !important; height:260px !important; }
 
+/* small util */
+.text-muted { color: #7b9bb3; }
+.badge { padding:6px 8px; border-radius:8px; }
 
-.sidebar-footer {
-  text-align: center;
-  padding: 12px 0 0 0;
-  color: #9ccfe7;
-  font-size: 0.99rem;
-}
-
-.main-content {
-  margin-left: 250px;
-  padding: 32px 36px 32px 36px;
-  min-height: 100vh;
-  transition: margin-left .20s cubic-bezier(.4,2,.6,1);
-
-}
-.sidebar-nav.expanded ~ .main-content {
-  margin-left: 250px;
-}
-
-
-
-/* Top Card: Welcome/Profile */
-.dashboard-header-card {
-  max-width: 950px;
-  margin: 0 auto 28px auto;
-  background: linear-gradient(95deg, #f3f9fe 87%, #ddedfb 100%);
-  border-radius: 20px;
-  box-shadow: 0 4px 28px #77a8db17;
-  padding: 28px 32px 18px 32px;
-  display: flex; flex-direction:column;
-}
-.profile-card {
-  display: flex; flex-direction: column; gap:8px;
-}
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-.profile-header img {
-  border-radius: 50%;
-  width: 68px;
-  height: 68px;
-  object-fit: cover;
-  border: 3px solid #cbe9f7;
-}
-.profile-details { margin-top: 14px; }
-.profile-details p { margin: 5px 0; color: #2372a7;}
-.dashboard-header-card hr {margin:10px 0 6px 0;}
-.dashboard-card {
-  background: linear-gradient(135deg, #f9fcfe 98%, #dcedf7 100%);
-  border-radius: 17px;
-  box-shadow: 0 7px 19px #9dd1e814, 0 1px 10px #60aee410;
-  padding: 20px 24px 18px 24px;
-  margin-bottom: 22px;
-}
-.card-header.bg-primary {
-  background: #2178b5 !important;
-  color: #fff !important;
-}
-.card-header.bg-warning { background: #def1ff !important; color: #2178b5 !important; }
-.card-header.bg-success { background: #94d7c4 !important; color: #24705b !important; }
-.card-header.bg-info { background: #e4f2fa !important; color: #3082b7 !important; }
-.card-header.bg-dark { background: #256a92 !important; color: #fff !important; }
-.card-header { font-weight: bold; padding: 0.8em 1.3em; border-radius: 12px 12px 0 0;}
-.btn-primary, .btn-outline-primary {
-  background-color: #2178b5 !important;
-  border-color: #bee5fd !important; color: #fff;
-}
-.btn-primary:hover, .btn-outline-primary:hover {
-  background-color: #329ae6 !important; border-color: #2178b5 !important;
-}
-.btn-success, .btn-outline-success { background-color: #36a397 !important; border-color: #4bc8b7 !important; color: #fff;}
-.btn-success:hover, .btn-outline-success:hover { background-color: #1d867e !important; border-color: #36a397 !important;}
-.btn-warning, .btn-outline-warning { background-color: #f3f9fe !important; color: #2178b5 !important; border-color: #c2e5ff !important;}
-.btn-info, .btn-outline-info { background-color: #e4f2fa !important; color: #2178b5 !important; border-color: #a9cadd !important;}
-.btn-danger, .btn-outline-danger { background-color: #be6c91 !important; color: #fff !important; border-color: #9c3d65 !important;}
-.btn { border-radius: 8px; }
-
-.graph-section { display: none; }
-.graph-section.active { display: block; }
-
-.sidebar-menu .submenu-vertical {
-  display: none;
-  background: #165e88;
-  margin-left: 0;
-  border-radius: 6px 0 0 6px;
-  padding: 0;
-}
-.sidebar-menu .submenu-vertical.open { display: block; }
-.sidebar-menu .submenu-vertical a {
-  display: flex;
-  align-items: center;
-  color: #e0f3ff;
-  font-size: 1rem;
-  padding: 14px 32px 14px 56px;
-  border-radius: 6px 0 0 6px;
-  border-left: 3px solid #0f5279 !important;
-  background: none;
-  margin-bottom: 0;
-  text-decoration: none;
-  transition: background .14s, color .14s, border-color .2s;
-}
-.sidebar-menu .submenu-vertical a.active, .sidebar-menu .submenu-vertical a:hover {
-  background: #2178b5;
-  color: #fff;
-  border-left: 3px solid #80c2fa !important;
-}
-.sidebar-menu .submenu-vertical .bi {
-  margin-right: 10px;
-  font-size: 1.18em;
+.dark-toggle {
+  position: fixed; right: 18px; top: 18px;
+  z-index: 2000;
+  display:flex; gap:8px; align-items:center;
 }
 </style>
 
-<!-- Sidebar Navigation -->
-<nav class="sidebar-nav" aria-label="Side Navigation" id="sidebar-nav">
-  <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Expand/collapse sidebar">
-    <i class="bi bi-list"></i>
+<!-- Light/Dark Toggle -->
+<div class="dark-toggle">
+  <button id="themeToggleBtn" class="btn btn-outline-primary btn-sm" title="Toggle light/dark">
+    🌙 / ☀️
   </button>
+</div>
 
+<!-- Sidebar -->
+<nav id="sidebar-nav" class="sidebar-nav" aria-label="Side Navigation">
+  <button id="menu-toggle-btn" class="menu-toggle-btn" aria-label="Toggle menu">
+    <i class="bi bi-list" style="font-size:1.2rem"></i>
+  </button>
   <div class="sidebar-brand">FinSecure</div>
   <div class="sidebar-menu">
-    <a href="{% url 'dashboard' %}" class="active"><i class="bi bi-house-door-fill"></i><span>Dashboard</span></a>
+    <a href="{% url 'dashboard' %}" class="active"><i class="bi bi-house-door-fill"></i> <span class="label">Dashboard</span></a>
     <div>
-      <button class="submenu-toggle" id="transactions-menu" aria-expanded="false">
-        <i class="bi bi-cash-coin"></i><span>Transactions</span>
-        <span class="submenu-arrow bi bi-chevron-right"></span>
-      </button>
-      <div class="submenu" id="transactions-submenu">
-        <a href="{% url 'transactions:add' %}"><i class="bi bi-plus-circle"></i><span>Add Transaction</span></a>
-        <a href="{% url 'transactions:list' %}"><i class="bi bi-list-ul"></i><span>View All</span></a>
+      <button id="transactions-menu" class="submenu-toggle" aria-expanded="false"><i class="bi bi-cash-coin"></i> <span class="label">Transactions</span></button>
+      <div id="transactions-submenu" class="submenu" style="display:none; margin-left:8px;">
+        <a href="{% url 'transactions:add' %}"><i class="bi bi-plus-circle"></i> <span class="label">Add</span></a>
+        <a href="{% url 'transactions:list' %}"><i class="bi bi-list-ul"></i> <span class="label">List</span></a>
       </div>
     </div>
+    <a href="{% url 'fraud_alerts' %}"><i class="bi bi-exclamation-triangle"></i> <span class="label">Fraud Alerts</span></a>
 
-    <a href="{% url 'fraud_alerts' %}"><i class="bi bi-exclamation-triangle"></i><span>Fraud Alerts</span></a>
-    <button class="submenu-toggle" id="reports-menu" aria-expanded="false">
+    <button id="reports-menu" class="submenu-toggle" aria-expanded="false"><i class="bi bi-bar-chart-line"></i> <span class="label">Reports</span></button>
+    <div id="reports-submenu" class="submenu-vertical" style="display:none; margin-left:8px;">
+      <a href="#" class="show-graph" data-graph="spending"><i class="bi bi-graph-up"></i> Spending</a>
+      <a href="#" class="show-graph" data-graph="fraud-amount"><i class="bi bi-exclamation-diamond"></i> Fraud Amount</a>
+      <a href="#" class="show-graph" data-graph="fraud-count"><i class="bi bi-bar-chart"></i> Fraud Count</a>
+    </div>
 
-        <i class="bi bi-bar-chart-line"></i><span>Reports</span>
-        <span class="submenu-arrow bi bi-chevron-right"></span>
-      </button>
-      <div class="submenu-vertical" id="reports-submenu">
-        <a href="#" class="show-graph" data-graph="spending"><i class="bi bi-graph-up"></i>Spending Graphs</a>
-        <a href="#" class="show-graph" data-graph="fraud-amount"><i class="bi bi-exclamation-diamond"></i>Fraud Amount</a>
-        <a href="#" class="show-graph" data-graph="fraud-count"><i class="bi bi-bar-chart"></i>Fraud Count</a>
-      </div>
-    <a href="{% url 'settings' %}"><i class="bi bi-gear"></i><span>Settings</span></a>
+    <a href="{% url 'settings' %}"><i class="bi bi-gear"></i> <span class="label">Settings</span></a>
   </div>
   <div class="sidebar-footer">© {{ now|date:"Y" }} FinSecure</div>
 </nav>
 
 <!-- Main Content -->
-<div class="main-content">
-  <!-- Loader -->
-  <div id="loader" class="loader-overlay d-none">
+<div class="main-content" id="main-content">
+  <!-- Loader (hidden by default) -->
+  <div id="loader" class="d-none" style="position:fixed;left:50%;top:45%;transform:translate(-50%,-50%); z-index:1500; display:flex; align-items:center; gap:10px;">
     <div class="spinner-border text-primary" role="status"></div>
-    <span class="ms-2">Loading...</span>
+    <div>Loading...</div>
   </div>
 
-  <!-- User Profile Card (Enhanced) -->
+  <!-- Header card -->
   <div class="dashboard-header-card">
     <div class="profile-card">
       <div class="profile-header">
@@ -321,516 +167,459 @@ body {
           <img src="{% static 'images/default-profile.png' %}" alt="Default Profile">
         {% endif %}
         <div>
-          <h2>Welcome, {{ user.get_full_name|default:user.username }} 👋</h2>
-          <p>Your personalized financial dashboard</p>
+          <h2 style="margin:0;">Welcome, {{ user.get_full_name|default:user.username }} 👋</h2>
+          <div class="text-muted">Your personalized financial dashboard</div>
         </div>
       </div>
-      <hr>
-      <div class="profile-details">
-        <p><strong>📧 Email:</strong> {{ user.email }}</p>
-        <p><strong>📞 Phone:</strong> {{ user.profile.phone|default:"Not set" }}</p>
-        <p><strong>💼 Occupation:</strong> {{ user.profile.occupation|default:"Not set" }}</p>
-        <p><strong>💰 Income:</strong> ₹<span id="income">{{ income|default:user.profile.income|default:"0.00"|floatformat:2 }}</span></p>
-      </div>
-      <div style="margin-top: 15px;">
-        <a href="{% url 'profile' %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i> Update Profile</a>
-        {% if gmail_connected %}
-          <span class="badge bg-success ms-2"><i class="bi bi-check-circle"></i> Gmail Connected</span>
-        {% else %}
-          <a href="{% url 'connect_gmail' %}" class="btn btn-danger btn-sm ms-2"><i class="bi bi-envelope"></i> Connect Gmail</a>
-        {% endif %}
+      <hr style="margin:12px 0;">
+      <div class="profile-details" style="display:flex; gap:16px; flex-wrap:wrap;">
+        <div><strong>📧</strong> {{ user.email }}</div>
+        <div><strong>📞</strong> {{ user.profile.phone|default:"Not set" }}</div>
+        <div><strong>💼</strong> {{ user.profile.occupation|default:"Not set" }}</div>
+        <div><strong>💰 Income</strong> ₹<span id="income">{{ income|default:user.profile.income|default:"0.00"|floatformat:2 }}</span></div>
+        <div>
+          <a href="{% url 'profile' %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i> Update Profile</a>
+          {% if gmail_connected %}
+            <span class="badge bg-success ms-2">Gmail Connected</span>
+          {% else %}
+            <a href="{% url 'connect_gmail' %}" class="btn btn-outline-primary btn-sm ms-2"><i class="bi bi-envelope"></i> Connect Gmail</a>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Featured Widgets -->
+  <!-- Top widgets -->
   <div class="dashboard-card">
-    <div class="row gx-3">
-      <div class="col-md-4 mb-3">
-        <div class="card h-100 p-2 shadow-sm">
-          <div class="card-header bg-warning text-dark fw-bold">Financial Assistance</div>
-          <div class="card-body text-center">
-            <a href="{% url 'assist_home_home' %}" class="btn btn-warning btn-lg">💵 Financial Assistance</a>
-          </div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:240px;">
+        <div class="card-header" style="background:transparent; padding:0 0 8px 0;"><strong>Financial Assistance</strong></div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <a href="{% url 'assist_home_home' %}" class="btn btn-warning">💵 Get Assistance</a>
         </div>
       </div>
-      <div class="col-md-4 mb-3">
-        <div class="card h-100 p-2 shadow-sm">
-          <div class="card-header bg-dark text-white">Transactions</div>
-          <div class="card-body d-flex flex-column justify-content-center align-items-center">
-            <a href="{% url 'transactions:add' %}" class="btn btn-success btn-sm mb-2">Add Transaction</a>
-            
-          </div>
-        </div>
+
+      <div style="flex:1; min-width:240px;">
+        <div class="card-header" style="background:transparent; padding:0 0 8px 0;"><strong>Transactions</strong></div>
+        <div><a href="{% url 'transactions:add' %}" class="btn btn-success">+ Add Transaction</a></div>
       </div>
-      <div class="col-md-4 mb-3">
-        <div class="card h-100 p-2 shadow-sm">
-          <div class="card-header bg-success text-white">Smart Suggestions</div>
-          <div class="card-body">
-            <ul id="suggestions" class="list-group list-group-flush">
-              {% if suggestions %}
-                {% for s in suggestions %}
-                  <li class="list-group-item d-flex align-items-center {% if s.is_alert %}alert{% endif %}">
-                    {% comment %}
-                      s might be:
-                        - a string (older code) -> display s
-                        - an object/dict with keys suggestion/is_alert/created_at
-                    {% endcomment %}
-                    {% if s.suggestion %}
-                      {% if s.is_alert %}
-                        <span class="me-2 text-danger fw-bold">⚠</span>
-                      {% else %}
-                        <span class="me-2 text-success">💡</span>
-                      {% endif %}
-                      <span>{{ s.suggestion }}</span>
-                      <small class="text-muted ms-auto">{{ s.created_at|date:"M d, Y H:i" }}</small>
-                    {% else %}
-                      <span class="me-2 text-success">💡</span>
-                      <span>{{ s }}</span>
-                    {% endif %}
-                  </li>
-                {% endfor %}
-              {% else %}
-                <li class="text-muted">No suggestions available.</li>
-              {% endif %}
-            </ul>
-          </div>
-        </div>
+
+      <div style="flex:1; min-width:240px;">
+        <div class="card-header" style="background:transparent; padding:0 0 8px 0;"><strong>Smart Suggestions</strong></div>
+        <ul id="suggestions" class="list-group list-group-flush" style="margin:0; padding-left:0;">
+          {% if suggestions %}
+            {% for s in suggestions %}
+              <li class="list-group-item" style="border:none;padding:6px 0;">💡 {{ s }}</li>
+            {% endfor %}
+          {% else %}
+            <li class="text-muted">No suggestions available.</li>
+          {% endif %}
+        </ul>
       </div>
     </div>
 
-    <!-- Gmail Transactions Table -->
-    <div class="card shadow-sm mt-4">
-      <div class="card-header bg-success text-white">
-        <h5 class="mb-0">💰 Recent Gmail Transactions</h5>
+    <!-- Gmail transactions table -->
+    <div style="margin-top:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h5 style="margin:0;">💰 Recent Gmail Transactions</h5>
       </div>
-      <div class="card-body">
+      <div style="margin-top:8px;">
         {% if gmail_transactions %}
-        <div class="table-responsive">
-          <table class="table table-striped table-hover gmail-txns align-middle">
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Amount</th>
-                <th>Currency</th>
-                <th>Email</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for txn in gmail_transactions %}
-              <tr>
-                <td>{{ txn.description }}</td>
-                <td>{{ txn.amount }}</td>
-                <td>{{ txn.currency|default:"INR" }}</td>
-                <td>
-                  {% if txn.message_id %}
-                  <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}" 
-                     target="_blank" 
-                     class="btn btn-sm btn-outline-primary">
-                     📧 View Email
-                  </a>
-                  {% else %}
-                    <span class="text-muted">No message link</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <p class="text-muted">No Gmail transactions found.</p>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- Latest Emails -->
-    <div class="row gx-3 mt-4">
-      <div class="col-md-12 mb-3">
-        <div class="card h-100 p-2 shadow-sm">
-          <div class="card-header bg-info text-white">📧 Latest Emails</div>
-          <div class="card-body">
-            {% if latest_emails %}
-              <ul class="list-group list-group-flush">
-                {% for email in latest_emails %}
-                  <li class="list-group-item">
-                    <strong>From:</strong> {{ email.from }}<br>
-                    <strong>Subject:</strong> {{ email.subject }}<br>
-                    <small>{{ email.snippet }}</small>
-                  </li>
+          <div style="overflow:auto;">
+            <table class="table table-striped">
+              <thead>
+                <tr><th>Description</th><th>Amount</th><th>Currency</th><th>Email</th></tr>
+              </thead>
+              <tbody>
+                {% for txn in gmail_transactions %}
+                <tr>
+                  <td>{{ txn.description }}</td>
+                  <td>{{ txn.amount }}</td>
+                  <td>{{ txn.currency|default:"INR" }}</td>
+                  <td>
+                    {% if txn.message_id %}
+                      <a target="_blank" class="btn btn-sm btn-outline-primary" href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}">View Email</a>
+                    {% else %}
+                      <span class="text-muted">No link</span>
+                    {% endif %}
+                  </td>
+                </tr>
                 {% endfor %}
-              </ul>
-            {% else %}
-              <p class="text-muted">
-                {% if gmail_connected %}
-                  No recent emails found.
-                {% else %}
-                  Please connect Gmail to see emails.
-                {% endif %}
-              </p>
-            {% endif %}
+              </tbody>
+            </table>
           </div>
-        </div>
+        {% else %}
+          <div class="text-muted">No Gmail transactions found.</div>
+        {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Financial Health Summary -->
+  <!-- Financial health -->
   <div class="dashboard-card">
-    <div class="card-header bg-warning d-flex justify-content-between align-items-center">
-      <span class="fw-bold">📊 Financial Health Summary</span>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <strong>📊 Financial Health Summary</strong>
       <div>
         <button id="filter7" class="btn btn-sm btn-outline-primary">Last 7 Days</button>
-        <button id="filter30" class="btn btn-sm btn-outline-success">Last 30 Days</button>
+        <button id="filter30" class="btn btn-sm btn-outline-primary">Last 30 Days</button>
         <button id="filterAll" class="btn btn-sm btn-outline-primary">All Time</button>
       </div>
     </div>
-    <div class="row text-center mt-3 mb-2">
-      <div class="col-md-3 border-end">
-        <h6>Income</h6>
-        <p class="text-success fw-bold">₹<span id="income-card">{{ income|default:"0.00"|floatformat:2 }}</span></p>
+
+    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:160px;">
+        <div>Income</div>
+        <div style="font-weight:700; color:var(--positive)">₹<span id="income-card">{{ income|default:"0.00"|floatformat:2 }}</span></div>
       </div>
-      <div class="col-md-3 border-end">
-        <h6>Spending</h6>
-        <p class="text-danger fw-bold">₹<span id="spending">{{ spending|default:"0.00"|floatformat:2 }}</span></p>
+      <div style="flex:1; min-width:160px;">
+        <div>Spending</div>
+        <div style="font-weight:700; color:var(--negative)">₹<span id="spending">{{ spending|default:"0.00"|floatformat:2 }}</span></div>
       </div>
-      <div class="col-md-3 border-end">
-        <h6>Savings</h6>
-        <p class="text-primary fw-bold">₹<span id="savings">{{ savings|default:"0.00"|floatformat:2 }}</span></p>
+      <div style="flex:1; min-width:160px;">
+        <div>Savings</div>
+        <div style="font-weight:700">₹<span id="savings">{{ savings|default:"0.00"|floatformat:2 }}</span></div>
       </div>
-      <div class="col-md-3">
-        <h6>Alerts</h6>
-        <ul id="alerts" class="list-unstyled text-danger small">
-          {% for alert in alerts %}
-            <li>🔔 {{ alert }}</li>
-          {% empty %}
+      <div style="flex:1; min-width:200px;">
+        <div>Alerts</div>
+        <ul id="alerts" class="list-unstyled" style="margin:0; padding-left:0;">
+          {% if alerts %}
+            {% for alert in alerts %}
+              <li>🔔 {{ alert }}</li>
+            {% endfor %}
+          {% else %}
             <li class="text-success">No unusual activity</li>
-          {% endfor %}
+          {% endif %}
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- Spending Graphs -->
-  <div id="spending-graph-section" class="graph-section"></div>
-  <div class="dashboard-card">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center toggle-collapse"
-         data-bs-toggle="collapse" data-bs-target="#spendingGraphs" style="cursor:pointer;">
-      <span>📈 Spending Graphs</span>
-      <span class="arrow">▼</span>
+  <!-- Graphs -->
+  <div class="dashboard-card" id="graphs-area">
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:320px;">
+        <h6>📈 Spending (7d)</h6>
+        <canvas id="spendingChart7d"></canvas>
+      </div>
+      <div style="flex:1; min-width:320px;">
+        <h6>📈 Spending (30d)</h6>
+        <canvas id="spendingChart30d"></canvas>
+      </div>
+      <div style="flex:1; min-width:320px;">
+        <h6>📈 Spending (All)</h6>
+        <canvas id="spendingChartAll"></canvas>
+      </div>
     </div>
-    <div id="spendingGraphs" class="collapse">
-      <div class="row mt-4 mb-2">
-        <div class="col-md-4 mb-2"><h6>Spending (7 Days)</h6><canvas id="spendingChart7d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Spending (30 Days)</h6><canvas id="spendingChart30d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Spending (All Time)</h6><canvas id="spendingChartAll"></canvas></div>
+
+    <hr style="margin:18px 0;">
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:320px;">
+        <h6>⚠ Fraud Amount (7d)</h6>
+        <canvas id="fraudAmountChart7d"></canvas>
+      </div>
+      <div style="flex:1; min-width:320px;">
+        <h6>⚠ Fraud Amount (30d)</h6>
+        <canvas id="fraudAmountChart30d"></canvas>
+      </div>
+      <div style="flex:1; min-width:320px;">
+        <h6>⚠ Fraud Amount (All)</h6>
+        <canvas id="fraudAmountChartAll"></canvas>
+      </div>
+    </div>
+
+    <hr style="margin:18px 0;">
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+      <div style="flex:1; min-width:320px;">
+        <h6>📊 Fraud Count</h6>
+        <canvas id="fraudCountChartAll"></canvas>
+      </div>
+      <div style="width:320px;">
+        <h6>Compact Fraud Breakdown</h6>
+        <!-- this doughnut was missing before; JS renders into it -->
+        <canvas id="fraudDoughnut" style="height:240px;"></canvas>
+        <div class="text-muted small">Fraud vs Non-Fraud</div>
       </div>
     </div>
   </div>
 
-  <!-- Fraud Amount Graphs -->
-  <div id="fraud-amount-graph-section" class="graph-section"></div>
-  <div class="dashboard-card">
-    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center toggle-collapse"
-         data-bs-toggle="collapse" data-bs-target="#fraudAmountGraphs" style="cursor:pointer;">
-      <span>⚠ Fraud Amount Graphs</span>
-      <span class="arrow">▼</span>
-    </div>
-    <div id="fraudAmountGraphs" class="collapse">
-      <div class="row mt-4 mb-2">
-        <div class="col-md-4 mb-2"><h6>Fraud Amount (7 Days)</h6><canvas id="fraudAmountChart7d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Amount (30 Days)</h6><canvas id="fraudAmountChart30d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Amount (All Time)</h6><canvas id="fraudAmountChartAll"></canvas></div>
-      </div>
-    </div>
-  </div>
+</div> <!-- end main-content -->
 
-  <!-- Fraud Count Graphs -->
-  <div id="fraud-count-graph-section" class="graph-section"></div>
-  <div class="dashboard-card">
-    <div class="card-header bg-warning d-flex justify-content-between align-items-center toggle-collapse"
-         data-bs-toggle="collapse" data-bs-target="#fraudCountGraphs" style="cursor:pointer;">
-      <span>📊 Fraud Count Graphs</span>
-      <span class="arrow">▼</span>
-    </div>
-    <div id="fraudCountGraphs" class="collapse">
-      <div class="row mt-4 mb-2">
-        <div class="col-md-4 mb-2"><h6>Fraud Count (7 Days)</h6><canvas id="fraudCountChart7d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Count (30 Days)</h6><canvas id="fraudCountChart30d"></canvas></div>
-        <div class="col-md-4 mb-2"><h6>Fraud Count (All Time)</h6><canvas id="fraudCountChartAll"></canvas></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Scripts -->
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-  // Sidebar toggle (safe guards)
-  const sidebar = document.getElementById('sidebar-nav');
-  const toggleBtn = document.getElementById('menu-toggle-btn');
-  if (toggleBtn && sidebar) {
-    toggleBtn.onclick = function() {
-      sidebar.classList.toggle('expanded');
-      const main = document.querySelector('.main-content');
-      if (main) {
-        if (sidebar.classList.contains('expanded')) {
-          main.style.marginLeft = "250px";
-        } else {
-          main.style.marginLeft = "60px";
-        }
-      }
-    };
-  }
+// ----------------- UI helpers -----------------
+const sidebar = document.getElementById('sidebar-nav');
+const menuBtn = document.getElementById('menu-toggle-btn');
+menuBtn?.addEventListener('click', () => {
+  sidebar.classList.toggle('collapsed');
+  document.querySelector('.main-content').style.marginLeft = sidebar.classList.contains('collapsed') ? '60px' : '250px';
+});
 
-  // Transactions submenu toggle
-  const submenuToggle = document.getElementById('transactions-menu');
-  const submenu = document.getElementById('transactions-submenu');
-  if (submenuToggle && submenu) {
-    submenuToggle.onclick = function() {
-      const expanded = submenuToggle.getAttribute('aria-expanded') === 'true';
-      submenuToggle.setAttribute('aria-expanded', (!expanded).toString());
-      submenu.classList.toggle('open');
-    };
-  }
+document.getElementById('transactions-menu')?.addEventListener('click', () => {
+  const sub = document.getElementById('transactions-submenu');
+  if (!sub) return;
+  const open = sub.style.display === 'block';
+  sub.style.display = open ? 'none' : 'block';
+});
 
-  // Reports submenu vertical toggle
-  const reportsToggle = document.getElementById('reports-menu');
-  const reportsMenu = document.getElementById('reports-submenu');
-  if (reportsToggle && reportsMenu) {
-    reportsToggle.onclick = function() {
-      const expanded = reportsToggle.getAttribute('aria-expanded') === 'true';
-      reportsToggle.setAttribute('aria-expanded', (!expanded).toString());
-      reportsMenu.classList.toggle('open');
-    };
-  }
+document.getElementById('reports-menu')?.addEventListener('click', () => {
+  const sub = document.getElementById('reports-submenu');
+  if (!sub) return;
+  const open = sub.style.display === 'block';
+  sub.style.display = open ? 'none' : 'block';
+});
 
-  // Show graph section links
-  document.querySelectorAll('.show-graph').forEach(link => {
-    link.addEventListener('click', function(e) {
-      e.preventDefault();
-      document.querySelectorAll('.graph-section').forEach(sec => sec.classList.remove('active'));
-      // mapping: data-graph values are 'spending', 'fraud-amount', 'fraud-count'
-      if (this.dataset.graph === 'spending') {
-        const el = document.getElementById('spending-graph-section');
-        if (el) el.classList.add('active');
-      }
-      if (this.dataset.graph === 'fraud-amount') {
-        const el = document.getElementById('fraud-amount-graph-section');
-        if (el) el.classList.add('active');
-      }
-      if (this.dataset.graph === 'fraud-count') {
-        const el = document.getElementById('fraud-count-graph-section');
-        if (el) el.classList.add('active');
-      }
-      if (reportsMenu) {
-        reportsMenu.classList.remove('open');
-        reportsToggle.setAttribute('aria-expanded', 'false');
-      }
-      setTimeout(() => {
-        let visible = document.querySelector('.graph-section.active');
-        if (visible) visible.scrollIntoView({behavior: "smooth"});
-      }, 100);
-    });
+// graph quick links
+document.querySelectorAll('.show-graph').forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const g = a.dataset.graph;
+    if (!g) return;
+    // find section and scroll
+    const el = document.getElementById('graphs-area');
+    if (el) el.scrollIntoView({behavior:'smooth'});
   });
+});
 
-  // Charts storage so we can destroy and re-create
-  let chartInstances = {};
+// theme toggle
+const themeToggle = document.getElementById('themeToggleBtn');
+const htmlEl = document.documentElement;
+(function initTheme(){
+  const saved = localStorage.getItem('finsecure_theme') || 'light';
+  if (saved === 'dark') document.documentElement.setAttribute('data-theme','dark');
+})();
+themeToggle?.addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('finsecure_theme', next);
+});
 
-  function renderChart(canvasId, labels, dataArr, labelName, color, type="line") {
-    try {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) return;
-      if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
-      const ctx = canvas.getContext("2d");
-      chartInstances[canvasId] = new Chart(ctx, {
-        type: type,
-        data: {
-          labels: labels,
-          datasets: [{
-            label: labelName,
-            data: dataArr,
-            borderColor: color || undefined,
-            backgroundColor: type === "line" ? undefined : (color || undefined),
-            fill: type === "line",
-            tension: 0.3
-          }]
+// ----------------- Chart utilities -----------------
+let chartInstances = {};
+
+function safeDestroy(id){
+  if (chartInstances[id]) {
+    try { chartInstances[id].destroy(); } catch(_) {}
+    delete chartInstances[id];
+  }
+}
+
+function renderChart(canvasId, config){
+  try{
+    const c = document.getElementById(canvasId);
+    if (!c) return;
+    safeDestroy(canvasId);
+    chartInstances[canvasId] = new Chart(c.getContext('2d'), config);
+  } catch(e){
+    console.error('renderChart error', e, canvasId, config);
+  }
+}
+
+function toNumberArr(arr){
+  if (!Array.isArray(arr)) return [];
+  return arr.map(x => {
+    if (x === null || x === undefined) return 0;
+    if (typeof x === 'number') return x;
+    const n = parseFloat(x);
+    return Number.isFinite(n) ? n : 0;
+  });
+}
+
+// combine line + bar dataset helper
+function makeComboConfig(labels, barData, lineData, labelName){
+  return {
+    type: 'bar',
+    data: {
+      labels: labels || [],
+      datasets: [
+        {
+          type: 'bar',
+          label: labelName + ' (bar)',
+          data: toNumberArr(barData || []),
+          backgroundColor: undefined, // let Chart.js default colors
+          yAxisID: 'y',
         },
-        options: { responsive: true, plugins: { legend: { position: "top" } } }
-      });
-    } catch (err) {
-      console.error("renderChart error:", err, canvasId, labels, dataArr);
+        {
+          type: 'line',
+          label: labelName + ' (trend)',
+          data: toNumberArr(lineData || []),
+          borderWidth: 2,
+          fill: false,
+          tension: 0.3,
+          yAxisID: 'y',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      stacked: false,
+      scales: {
+        y: { beginAtZero: true, ticks: { precision:0 } }
+      },
+      plugins: { legend: { position: 'top' } }
     }
-  }
+  };
+}
 
-  // Helper: safe parse numbers (handles strings from JSON)
-  function toNumberArr(arr) {
-    return arr.map(x => {
-      if (x === null || x === undefined) return 0;
-      if (typeof x === 'number') return x;
-      const n = parseFloat(x);
-      return isNaN(n) ? 0 : n;
-    });
-  }
+// ----------------- Fetch and render -----------------
+async function fetchDashboardData(period='all'){
+  document.getElementById('loader')?.classList.remove('d-none');
+  try{
+    const res = await fetch("{% url 'get_dashboard_data' %}?period=" + encodeURIComponent(period));
+    if (!res.ok) throw new Error('Network error: ' + res.status);
+    const data = await res.json();
 
-  // Core fetch function - uses the users view name 'get_dashboard_data'
-  function fetchDashboardData(period = "all") {
-    document.getElementById("loader")?.classList.remove("d-none");
-    // Correct URL name: use get_dashboard_data (your users/urls.py registers this)
-    fetch("{% url 'get_dashboard_data' %}?period=" + encodeURIComponent(period))
-      .then(response => {
-        if (!response.ok) throw new Error("Network response was not ok: " + response.status);
-        return response.json();
-      })
-      .then(data => {
-        // Some backends return floats, some strings; coerce numbers safely
-        const income = (data.income !== undefined) ? Number(data.income) : 0;
-        const spending = (data.spending !== undefined) ? Number(data.spending) : 0;
-        const savings = (data.savings !== undefined) ? Number(data.savings) : (income - spending);
+    // Basic numeric fields
+    const income = (data.income !== undefined) ? Number(data.income) : 0;
+    const spending = (data.spending !== undefined) ? Number(data.spending) : 0;
+    const savings = (data.savings !== undefined) ? Number(data.savings) : (income - spending);
 
-        // Update summary cards (check multiple possible element IDs)
-        const incomeEls = [document.getElementById('income-card'), document.getElementById('income')].filter(Boolean);
-        incomeEls.forEach(el => el.innerText = income.toFixed(2));
+    // Update UI
+    document.getElementById('income-card') && (document.getElementById('income-card').innerText = income.toFixed(2));
+    document.getElementById('income') && (document.getElementById('income').innerText = income.toFixed(2));
+    document.getElementById('spending') && (document.getElementById('spending').innerText = spending.toFixed(2));
+    document.getElementById('savings') && (document.getElementById('savings').innerText = savings.toFixed(2));
 
-        const spendingEls = [document.getElementById('spending'), document.getElementById('spending-card')].filter(Boolean);
-        spendingEls.forEach(el => el.innerText = spending.toFixed(2));
+    // Alerts
+    const alertsBox = document.getElementById('alerts');
+    if (alertsBox){
+      alertsBox.innerHTML = '';
+      if (Array.isArray(data.alerts) && data.alerts.length){
+        data.alerts.forEach(a => {
+          const li = document.createElement('li');
+          li.textContent = a;
+          alertsBox.appendChild(li);
+        });
+      } else {
+        const li = document.createElement('li');
+        li.className = 'text-success';
+        li.textContent = 'No unusual activity';
+        alertsBox.appendChild(li);
+      }
+    }
 
-        const savingsEls = [document.getElementById('savings')].filter(Boolean);
-        savingsEls.forEach(el => el.innerText = savings.toFixed(2));
+    // Suggestions
+    const suggestionsBox = document.getElementById('suggestions');
+    if (suggestionsBox){
+      // only replace if backend returned suggestions
+      if (Array.isArray(data.suggestions) && data.suggestions.length){
+        suggestionsBox.innerHTML = '';
+        data.suggestions.forEach(s => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item';
+          li.style.border = 'none';
+          li.textContent = (s && s.suggestion) ? s.suggestion : s;
+          suggestionsBox.appendChild(li);
+        });
+      }
+    }
 
-        // Alerts
-        const alertsBox = document.getElementById("alerts");
-        if (alertsBox) {
-          alertsBox.innerHTML = "";
-          if (Array.isArray(data.alerts) && data.alerts.length) {
-            data.alerts.forEach(a => {
-              alertsBox.innerHTML += `<li>🔔 ${a}</li>`;
-            });
-          } else {
-            alertsBox.innerHTML = `<li class="text-success">No unusual activity</li>`;
-          }
-        }
-
-        // Suggestions (if backend includes suggestions)
-        const suggestionsBox = document.getElementById("suggestions");
-        if (suggestionsBox) {
-          suggestionsBox.innerHTML = "";
-          if (Array.isArray(data.suggestions) && data.suggestions.length) {
-            data.suggestions.forEach(s => {
-              suggestionsBox.innerHTML += `<li class="list-group-item">💡 ${ (s.suggestion) ? s.suggestion : s }</li>`;
-            });
-          } else {
-            // If template passed suggestions already from server-side context, don't override with empty
-            if (suggestionsBox.children.length === 0) {
-              suggestionsBox.innerHTML = '<li class="list-group-item">No suggestions available.</li>';
-            }
-          }
-        }
-
-        // Prepare data for charts.
-        // Priority: if backend returns labels_* and spending_* arrays, use them (time series).
-        // Fallback: use category_spending (category totals) and fraud_stats for doughnut/bar charts.
-
-        // Spending charts
-        if (data.labels_7d && data.spending_7d) {
-          renderChart("spendingChart7d", data.labels_7d, toNumberArr(data.spending_7d), "Spending (7d)", "#7193e6", "line");
-        } else if (data.category_spending) {
-          // If no time-series, populate category totals into the 7d chart as fallback
-          const cats = data.category_spending.map(x => x.category || "Uncategorized");
-          const totals = toNumberArr(data.category_spending.map(x => x.total));
-          renderChart("spendingChart7d", cats, totals, "Spending by Category", "#7193e6", "bar");
-        } else {
-          // Clear chart if empty
-          renderChart("spendingChart7d", [], [], "Spending (7d)", "#7193e6", "bar");
-        }
-
-        if (data.labels_30d && data.spending_30d) {
-          renderChart("spendingChart30d", data.labels_30d, toNumberArr(data.spending_30d), "Spending (30d)", "#8f6ee0", "line");
-        } else {
-          renderChart("spendingChart30d", [], [], "Spending (30d)", "#8f6ee0", "bar");
-        }
-
-        if (data.labels_all && data.spending_all) {
-          renderChart("spendingChartAll", data.labels_all, toNumberArr(data.spending_all), "Spending (All)", "#a459c8", "line");
-        } else {
-          // fallback to category totals
-          if (data.category_spending) {
-            const cats = data.category_spending.map(x => x.category || "Uncategorized");
-            const totals = toNumberArr(data.category_spending.map(x => x.total));
-            renderChart("spendingChartAll", cats, totals, "Spending (All)", "#a459c8", "bar");
-          } else {
-            renderChart("spendingChartAll", [], [], "Spending (All)", "#a459c8", "bar");
-          }
-        }
-
-        // Fraud amount charts (if backend provides fraud series)
-        if (data.fraud_7d_amount) {
-          renderChart("fraudAmountChart7d", data.labels_7d || [], toNumberArr(data.fraud_7d_amount), "Fraud Amount (7d)", "#d36bea", "bar");
-        } else {
-          renderChart("fraudAmountChart7d", [], [], "Fraud Amount (7d)", "#d36bea", "bar");
-        }
-        if (data.fraud_30d_amount) {
-          renderChart("fraudAmountChart30d", data.labels_30d || [], toNumberArr(data.fraud_30d_amount), "Fraud Amount (30d)", "#8d53c9", "bar");
-        } else {
-          renderChart("fraudAmountChart30d", [], [], "Fraud Amount (30d)", "#8d53c9", "bar");
-        }
-        if (data.fraud_all_amount) {
-          renderChart("fraudAmountChartAll", data.labels_all || [], toNumberArr(data.fraud_all_amount), "Fraud Amount (All)", "#b67ee6", "bar");
-        } else {
-          renderChart("fraudAmountChartAll", [], [], "Fraud Amount (All)", "#b67ee6", "bar");
-        }
-
-        // Fraud count: backend likely returns fraud_stats (array of {is_fraud: ... , count: ...})
-        if (Array.isArray(data.fraud_stats) && data.fraud_stats.length) {
-          // order: fraud true first, then false
-          const fraudRow = data.fraud_stats.find(r => String(r.is_fraud) === "True" || r.is_fraud === true) || {count:0};
-          const nonFraudRow = data.fraud_stats.find(r => String(r.is_fraud) === "False" || r.is_fraud === false) || {count:0};
-          const labels = ["Fraud", "Non-Fraud"];
-          const counts = [Number(fraudRow.count || 0), Number(nonFraudRow.count || 0)];
-          renderChart("fraudCountChart7d", labels, counts, "Fraud Count (count)", "#c992e0", "bar");
-          renderChart("fraudCountChart30d", labels, counts, "Fraud Count (count)", "#993fc7", "bar");
-          renderChart("fraudCountChartAll", labels, counts, "Fraud Count (count)", "#e9bafd", "bar");
-          // also draw a compact fraud doughnut for the 'fraudAmountChart' area if desired
-          renderChart("fraudAmountChart", labels, counts, "Fraud vs Non-Fraud", "#d36bea", "doughnut");
-        } else {
-          // If backend provided counts differently, try 'fraud_counts' keys (fallback)
-          renderChart("fraudCountChart7d", [], [], "Fraud Count (7d)", "#c992e0", "bar");
-          renderChart("fraudCountChart30d", [], [], "Fraud Count (30d)", "#993fc7", "bar");
-          renderChart("fraudCountChartAll", [], [], "Fraud Count (All)", "#e9bafd", "bar");
-        }
-      })
-      .catch(err => {
-        console.error("Error loading dashboard data:", err);
-        const alertsBox = document.getElementById("alerts");
-        if (alertsBox) alertsBox.innerHTML = `<li class="text-danger">Error loading dashboard data</li>`;
-      })
-      .finally(() => {
-        document.getElementById("loader")?.classList.add("d-none");
+    // Spending charts - try to use timeseries first
+    // We'll support data.labels_7d / spending_7d etc, otherwise fallback to category_spending
+    if (data.labels_7d && data.spending_7d){
+      renderChart('spendingChart7d', makeComboConfig(data.labels_7d, data.spending_7d, data.spending_7d, 'Spending (7d)'));
+    } else if (data.category_spending){
+      const cats = data.category_spending.map(x => x.category || 'Uncategorized');
+      const totals = data.category_spending.map(x => x.total || 0);
+      renderChart('spendingChart7d', makeComboConfig(cats, totals, totals, 'Category (7d)'));
+    } else {
+      renderChart('spendingChart7d', {
+        type:'bar', data:{labels:[], datasets:[]}, options:{responsive:true}
       });
+    }
+
+    if (data.labels_30d && data.spending_30d){
+      renderChart('spendingChart30d', makeComboConfig(data.labels_30d, data.spending_30d, data.spending_30d, 'Spending (30d)'));
+    } else {
+      renderChart('spendingChart30d', { type:'bar', data:{labels:[], datasets:[]}, options:{responsive:true}});
+    }
+
+    if (data.labels_all && data.spending_all){
+      renderChart('spendingChartAll', makeComboConfig(data.labels_all, data.spending_all, data.spending_all, 'Spending (All)'));
+    } else if (data.category_spending){
+      const cats = data.category_spending.map(x => x.category || 'Uncategorized');
+      const totals = data.category_spending.map(x => x.total || 0);
+      renderChart('spendingChartAll', makeComboConfig(cats, totals, totals, 'Category All'));
+    } else {
+      renderChart('spendingChartAll', { type:'bar', data:{labels:[], datasets:[]}, options:{responsive:true}});
+    }
+
+    // Fraud amount charts - data keys expected: fraud_7d_amount, fraud_30d_amount, fraud_all_amount
+    // Use labels_7d / labels_30d / labels_all if present, otherwise generate simple labels
+    const l7 = (Array.isArray(data.labels_7d) && data.labels_7d.length) ? data.labels_7d : (data.fraud_7d_amount ? data.fraud_7d_amount.map((_,i)=> `Day ${i+1}`) : []);
+    const l30 = (Array.isArray(data.labels_30d) && data.labels_30d.length) ? data.labels_30d : (data.fraud_30d_amount ? data.fraud_30d_amount.map((_,i)=> `Day ${i+1}`) : []);
+    const lall = (Array.isArray(data.labels_all) && data.labels_all.length) ? data.labels_all : (data.fraud_all_amount ? data.fraud_all_amount.map((_,i)=> `T${i+1}`) : []);
+
+    renderChart('fraudAmountChart7d', {
+      type:'bar',
+      data:{ labels: l7, datasets:[{ label:'Fraud Amount (7d)', data: toNumberArr(data.fraud_7d_amount || []), backgroundColor: undefined }]},
+      options:{ responsive:true, plugins:{ legend:{ position:'top' } }, scales:{ y:{ beginAtZero:true }}}
+    });
+    renderChart('fraudAmountChart30d', {
+      type:'bar',
+      data:{ labels: l30, datasets:[{ label:'Fraud Amount (30d)', data: toNumberArr(data.fraud_30d_amount || []), backgroundColor: undefined }]},
+      options:{ responsive:true, plugins:{ legend:{ position:'top' } }, scales:{ y:{ beginAtZero:true }}}
+    });
+    renderChart('fraudAmountChartAll', {
+      type:'bar',
+      data:{ labels: lall, datasets:[{ label:'Fraud Amount (All)', data: toNumberArr(data.fraud_all_amount || []), backgroundColor: undefined }]},
+      options:{ responsive:true, plugins:{ legend:{ position:'top' } }, scales:{ y:{ beginAtZero:true }}}
+    });
+
+    // Fraud count - prefer fraud_stats array: [{ is_fraud: True/False, count: N }, ...]
+    let fraudCounts = [0,0]; // [fraud, nonfraud]
+    if (Array.isArray(data.fraud_stats) && data.fraud_stats.length){
+      const fraudRow = data.fraud_stats.find(r => String(r.is_fraud) === "True" || r.is_fraud === true) || {count:0};
+      const nonRow = data.fraud_stats.find(r => String(r.is_fraud) === "False" || r.is_fraud === false) || {count:0};
+      fraudCounts = [Number(fraudRow.count||0), Number(nonRow.count||0)];
+    } else if (data.fraud_counts){
+      // alternate format
+      fraudCounts = [Number(data.fraud_counts.fraud || 0), Number(data.fraud_counts.nonfraud || 0)];
+    }
+
+    // render fraud count bar
+    renderChart('fraudCountChartAll', {
+      type:'bar',
+      data:{
+        labels: ['Fraud','Non-Fraud'],
+        datasets:[{ label:'Count', data: fraudCounts }]
+      },
+      options:{ responsive:true, plugins:{ legend:{ position:'top' } }, scales:{ y:{ beginAtZero:true, precision:0 }}}
+    });
+
+    // Render compact doughnut
+    renderChart('fraudDoughnut', {
+      type:'doughnut',
+      data:{
+        labels:['Fraud','Non-Fraud'],
+        datasets:[{ label:'Fraud Breakdown', data: fraudCounts }]
+      },
+      options:{ responsive:true, plugins:{ legend:{ position:'bottom' }}}
+    });
+
+  } catch (e){
+    console.error('Error loading dashboard data:', e);
+    const alertsBox = document.getElementById('alerts');
+    if (alertsBox) alertsBox.innerHTML = '<li class="text-danger">Error loading dashboard data</li>';
+  } finally {
+    document.getElementById('loader')?.classList.add('d-none');
   }
+}
 
-  // Wire up filter buttons safely
-  const btn7 = document.getElementById("filter7");
-  const btn30 = document.getElementById("filter30");
-  const btnAll = document.getElementById("filterAll");
-  if (btn7) btn7.addEventListener("click", () => fetchDashboardData("7"));
-  if (btn30) btn30.addEventListener("click", () => fetchDashboardData("30"));
-  if (btnAll) btnAll.addEventListener("click", () => fetchDashboardData("all"));
+// wire filter buttons
+document.getElementById('filter7')?.addEventListener('click', ()=> fetchDashboardData('7'));
+document.getElementById('filter30')?.addEventListener('click', ()=> fetchDashboardData('30'));
+document.getElementById('filterAll')?.addEventListener('click', ()=> fetchDashboardData('all'));
 
-  // Toggle collapse arrows (Bootstrap collapse events assumed present)
-  document.querySelectorAll(".toggle-collapse").forEach(header => {
-    const arrow = header.querySelector(".arrow");
-    const targetId = header.getAttribute("data-bs-target");
-    const target = document.querySelector(targetId);
-    if (!target) return;
-    // if bootstrap loaded, these events will be available; if not, ignore
-    try {
-      target.addEventListener("show.bs.collapse", () => arrow.textContent = "▲");
-      target.addEventListener("hide.bs.collapse", () => arrow.textContent = "▼");
-    } catch (e) { /* ignore if bootstrap not loaded */ }
-  });
-
-  // initial load
-  window.addEventListener("load", () => fetchDashboardData("all"));
+// initial load when page ready
+window.addEventListener('load', () => {
+  fetchDashboardData('all');
+});
 </script>
+
 {% endblock %}

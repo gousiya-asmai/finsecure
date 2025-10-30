@@ -219,136 +219,142 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, redirect
 
-from .models import UserProfile
-from assistance.models import SmartSuggestion
 
 from transactions.models import Transaction
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.db.models import Sum, Count
+from transactions.models import Transaction
+from datetime import datetime, timedelta
+from .models import UserProfile
+from assistance.models import SmartSuggestion
+from django.db import models
+
 
 
 # ------------------- Dashboard Page -------------------
-from decimal import Decimal
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.shortcuts import render, redirect
-from django.http import JsonResponse
-from django.db.models import Sum, Count
-from django.utils import timezone
 
-# Import your models
-from .models import UserProfile
-from assistance.models import SmartSuggestion
-from transactions.models import Transaction
+@login_required
+def dashboard(request):
+    user = request.user
 
+    # Basic context for template
+    transactions = Transaction.objects.filter(user=user)
+    income = transactions.filter(type='income').aggregate(Sum('amount'))['amount__sum'] or 0
+    spending = transactions.filter(type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
+    savings = income - spending
 
-@login_required(login_url="login")
-def dashboard_view(request):
-    """
-    Display the user dashboard with profile info, Gmail connection status,
-    latest emails, transactions, and smart suggestions.
-    """
-    try:
-        # Ensure the user has a profile
-        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    # Fraud stats (basic)
+    fraud_stats = list(
+        transactions.values('is_fraud')
+        .annotate(count=Count('id'))
+        .order_by('is_fraud')
+    )
 
-        # Warn if profile incomplete
-        if hasattr(profile, "is_complete") and not profile.is_complete():
-            messages.warning(request, "⚠️ Your profile is incomplete. Please update it.")
-
-        # Session-based Gmail data
-        gmail_connected = request.session.get("gmail_connected", False)
-        connected_gmail = request.session.get("connected_gmail")
-        latest_emails = request.session.get("latest_emails", [])
-        gmail_transactions = request.session.get("gmail_transactions", [])
-
-        # Get stored smart suggestions
-        suggestions_qs = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")[:5]
-        suggestions = [s.suggestion for s in suggestions_qs] if suggestions_qs.exists() else []
-
-        context = {
-            "profile": profile,
-            "income": profile.income or 0.0,
-            "gmail_connected": gmail_connected,
-            "connected_gmail": connected_gmail,
-            "latest_emails": latest_emails,
-            "gmail_transactions": gmail_transactions,
-            "suggestions": suggestions,
-        }
-
-        return render(request, "users/dashboard.html", context)
-
-    except Exception as e:
-        print("❌ Dashboard error:", e)
-        messages.error(request, f"Something went wrong loading your dashboard.")
-        return redirect("home")
+    context = {
+        'income': income,
+        'spending': spending,
+        'savings': savings,
+        'fraud_stats': fraud_stats,
+    }
+    return render(request, 'users/dashboard.html', context)
 
 
-# ------------------- Dashboard Data (AJAX) -------------------
 @login_required
 def get_dashboard_data(request):
-    """
-    Returns transaction summary data (income, spending, savings, alerts)
-    for the logged-in user as JSON. Used by frontend dashboard via AJAX.
-    """
-    try:
-        user = request.user
-        transactions = Transaction.objects.filter(user=user)
+    user = request.user
+    period = request.GET.get('period', 'all')
 
-        # Filter by period (optional)
-        period = request.GET.get("period", "all")
-        if period == "7":
-            start_date = timezone.now() - timezone.timedelta(days=7)
-            transactions = transactions.filter(timestamp__gte=start_date)
-        elif period == "30":
-            start_date = timezone.now() - timezone.timedelta(days=30)
-            transactions = transactions.filter(timestamp__gte=start_date)
+    today = datetime.today()
+    if period == "7":
+        start_date = today - timedelta(days=7)
+    elif period == "30":
+        start_date = today - timedelta(days=30)
+    else:
+        start_date = None
 
-        # Aggregations
-        total_spending = (
-            transactions.filter(transaction_type="debit").aggregate(Sum("amount"))["amount__sum"]
-            or Decimal("0.0")
-        )
-        total_income = (
-            transactions.filter(transaction_type="credit").aggregate(Sum("amount"))["amount__sum"]
-            or Decimal("0.0")
-        )
-        savings = total_income - total_spending
+    # Filtered transactions
+    txns = Transaction.objects.filter(user=user)
+    if start_date:
+        txns = txns.filter(date__gte=start_date)
 
-        # Alerts logic
-        alerts = []
-        if total_income > 0 and total_spending > Decimal("0.7") * total_income:
-            alerts.append("⚠️ High spending: over 70% of your income.")
-        if savings < 0:
-            alerts.append("⚠️ Overspending: savings are negative.")
-        fraud_count = transactions.filter(is_fraud=True).count()
-        if fraud_count:
-            alerts.append(f"⚠️ {fraud_count} fraud transactions detected!")
+    # Aggregate values
+    income = txns.filter(type='income').aggregate(Sum('amount'))['amount__sum'] or 0
+    spending = txns.filter(type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
+    savings = income - spending
 
-        # Category spending and fraud stats
-        category_spending = list(
-            transactions.filter(transaction_type="debit")
-            .values("category")
-            .annotate(total=Sum("amount"))
-        )
-        fraud_stats = list(transactions.values("is_fraud").annotate(count=Count("id")))
+    # Fraud detection
+    fraud_txns = txns.filter(is_fraud=True)
+    nonfraud_txns = txns.filter(is_fraud=False)
 
-        # Return as JSON
-        return JsonResponse(
-            {
-                "income": float(total_income),
-                "spending": float(total_spending),
-                "savings": float(savings),
-                "alerts": alerts,
-                "category_spending": category_spending,
-                "fraud_stats": fraud_stats,
-            },
-            safe=False,
-        )
+    # Group fraud amount by day for charts
+    def fraud_amount_series(queryset, days):
+        labels, values = [], []
+        for i in range(days):
+            day = today - timedelta(days=i)
+            total = queryset.filter(date__date=day.date()).aggregate(Sum('amount'))['amount__sum'] or 0
+            labels.append(day.strftime("%b %d"))
+            values.append(float(total))
+        labels.reverse()
+        values.reverse()
+        return labels, values
 
-    except Exception as e:
-        print("❌ Error in get_dashboard_data:", e)
-        return JsonResponse({"error": str(e)}, status=500)
+    # Fraud amount arrays for each period
+    labels_7d, fraud_7d_amount = fraud_amount_series(fraud_txns, 7)
+    labels_30d, fraud_30d_amount = fraud_amount_series(fraud_txns, 30)
 
+    # All-time fraud data (category sum or by month)
+    fraud_by_month = (
+        fraud_txns
+        .annotate(month=models.functions.TruncMonth('date'))
+        .values('month')
+        .annotate(total=Sum('amount'))
+        .order_by('month')
+    )
+    labels_all = [d['month'].strftime("%b %Y") for d in fraud_by_month]
+    fraud_all_amount = [float(d['total']) for d in fraud_by_month]
 
+    # Fraud count summary
+    fraud_stats = list(
+        txns.values('is_fraud')
+        .annotate(count=Count('id'))
+        .order_by('is_fraud')
+    )
+
+    # Alerts
+    alerts = []
+    if spending > income * 0.8:
+        alerts.append("High spending relative to income.")
+    if fraud_txns.exists():
+        alerts.append(f"{fraud_txns.count()} suspicious transactions detected.")
+
+    # Category spending for fallback graph
+    category_spending = list(
+        txns.filter(type='expense')
+        .values('category')
+        .annotate(total=Sum('amount'))
+        .order_by('-total')
+    )
+
+    data = {
+        "income": float(income),
+        "spending": float(spending),
+        "savings": float(savings),
+        "alerts": alerts,
+        "fraud_stats": fraud_stats,
+        "category_spending": category_spending,
+
+        # Fraud amount chart data
+        "labels_7d": labels_7d,
+        "fraud_7d_amount": fraud_7d_amount,
+        "labels_30d": labels_30d,
+        "fraud_30d_amount": fraud_30d_amount,
+        "labels_all": labels_all,
+        "fraud_all_amount": fraud_all_amount,
+    }
+
+    return JsonResponse(data)
 
 # ------------------- Connect Gmail -------------------
 @login_required
