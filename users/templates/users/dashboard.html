@@ -399,24 +399,15 @@ body {
       </div>
     </div>
 
-    <!-- Gmail & Email Section (Separate, not affected by JS updates) -->
-<div id="gmail-section" class="mt-4">
-  <!-- Recent Gmail Transactions -->
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">💰 Recent Gmail Transactions</h5>
-      {% if gmail_connected %}
-        <span class="badge bg-light text-success"><i class="bi bi-check-circle"></i> Connected</span>
-      {% else %}
-        <a href="{% url 'connect_gmail' %}" class="btn btn-outline-light btn-sm">
-          <i class="bi bi-envelope"></i> Connect Gmail
-        </a>
-      {% endif %}
-    </div>
-    <div class="card-body">
-      {% if gmail_transactions %}
+    <!-- Gmail Transactions Table -->
+    <div class="card shadow-sm mt-4">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">💰 Recent Gmail Transactions</h5>
+      </div>
+      <div class="card-body">
+        {% if gmail_transactions %}
         <div class="table-responsive">
-          <table class="table table-striped table-hover align-middle">
+          <table class="table table-striped table-hover gmail-txns align-middle">
             <thead>
               <tr>
                 <th>Description</th>
@@ -427,65 +418,62 @@ body {
             </thead>
             <tbody>
               {% for txn in gmail_transactions %}
-                <tr>
-                  <td>{{ txn.description }}</td>
-                  <td>₹{{ txn.amount }}</td>
-                  <td>{{ txn.currency|default:"INR" }}</td>
-                  <td>
-                    {% if txn.message_id %}
-                      <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}"
-                         target="_blank"
-                         class="btn btn-sm btn-outline-primary">
-                        📧 View Email
-                      </a>
-                    {% else %}
-                      <span class="text-muted">No message link</span>
-                    {% endif %}
-                  </td>
-                </tr>
+              <tr>
+                <td>{{ txn.description }}</td>
+                <td>{{ txn.amount }}</td>
+                <td>{{ txn.currency|default:"INR" }}</td>
+                <td>
+                  {% if txn.message_id %}
+                  <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}" 
+                     target="_blank" 
+                     class="btn btn-sm btn-outline-primary">
+                     📧 View Email
+                  </a>
+                  {% else %}
+                    <span class="text-muted">No message link</span>
+                  {% endif %}
+                </td>
+              </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-      {% else %}
-        <p class="text-muted mb-0">
-          {% if gmail_connected %}
-            No Gmail transactions found.
-          {% else %}
-            Please connect Gmail to view transactions.
-          {% endif %}
-        </p>
-      {% endif %}
+        {% else %}
+        <p class="text-muted">No Gmail transactions found.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Latest Emails -->
+    <div class="row gx-3 mt-4">
+      <div class="col-md-12 mb-3">
+        <div class="card h-100 p-2 shadow-sm">
+          <div class="card-header bg-info text-white">📧 Latest Emails</div>
+          <div class="card-body">
+            {% if latest_emails %}
+              <ul class="list-group list-group-flush">
+                {% for email in latest_emails %}
+                  <li class="list-group-item">
+                    <strong>From:</strong> {{ email.from }}<br>
+                    <strong>Subject:</strong> {{ email.subject }}<br>
+                    <small>{{ email.snippet }}</small>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="text-muted">
+                {% if gmail_connected %}
+                  No recent emails found.
+                {% else %}
+                  Please connect Gmail to see emails.
+                {% endif %}
+              </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-
-  <!-- Latest Emails -->
-  <div class="card shadow-sm">
-    <div class="card-header bg-info text-white">📧 Latest Emails</div>
-    <div class="card-body">
-      {% if latest_emails %}
-        <ul class="list-group list-group-flush">
-          {% for email in latest_emails %}
-            <li class="list-group-item">
-              <strong>From:</strong> {{ email.from }}<br>
-              <strong>Subject:</strong> {{ email.subject }}<br>
-              <small class="text-muted">{{ email.snippet }}</small>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="text-muted mb-0">
-          {% if gmail_connected %}
-            No recent emails found.
-          {% else %}
-            Please connect Gmail to see your latest emails.
-          {% endif %}
-        </p>
-      {% endif %}
-    </div>
-  </div>
-</div>
-
 
   <!-- Financial Health Summary -->
   <div class="dashboard-card">
