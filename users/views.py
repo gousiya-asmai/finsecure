@@ -8,38 +8,29 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.db.models import Sum, Count
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.conf import settings
+from decimal import Decimal
+from datetime import timedelta
 import random
 import logging
+
 # Models
 from transactions.models import Transaction
 from assistance.models import SmartSuggestion
 from users.models import UserProfile
-from django.shortcuts import render, redirect
 
-from users.utils import fetch_latest_emails, fetch_recent_transactions, save_transactions_to_db
-from users.otp_utils import send_otp_via_sendgrid
-
-
-from django.conf import settings
-
-
-
-# Utils (Removed gmail_authenticate)
+# Utils
 from users.utils import (
     fetch_latest_emails,
     fetch_recent_transactions,
     save_transactions_to_db,
-    get_gmail_profile,  # ✅ Make sure this returns Gmail account info (you can define it)
+    get_gmail_profile,
 )
+from users.otp_utils import send_otp_via_sendgrid
 
 # Forms
 from users.forms import UserUpdateForm, ProfileUpdateForm
-from django.http import HttpResponse
-
-
-from decimal import Decimal
-
 
 
 # ------------------- Home -------------------
@@ -105,7 +96,7 @@ def login_view(request):
                 otp = random.randint(100000, 999999)
                 request.session["otp"] = str(otp)
                 request.session["user_id"] = user.id
-                request.session["otp_expiry"] = (timezone.now() + timezone.timedelta(minutes=5)).isoformat()
+                request.session["otp_expiry"] = (timezone.now() + timedelta(minutes=5)).isoformat()
 
                 try:
                     response_code = send_otp_via_sendgrid(email, otp)
@@ -116,7 +107,6 @@ def login_view(request):
                     return redirect("verify_otp")
                 except Exception as e:
                     logging.error(f"OTP email send error: {e}", exc_info=True)
-                    print(f"OTP email send error: {e}")
                     messages.error(request, f"Failed to send OTP: {str(e)}")
                     return redirect("login")
             else:
@@ -124,14 +114,11 @@ def login_view(request):
                 return redirect("login")
 
     return render(request, "users/login.html")
+
+
 # ------------------- OTP Verification -------------------
-
-
-
-
-
 def verify_otp_view(request):
-    print("verify_otp_view called", request.method)  # Diagnostic print
+    logging.info("verify_otp_view called - method: %s", request.method)
 
     if request.method == "POST":
         input_otp = request.POST.get("otp")
@@ -139,10 +126,7 @@ def verify_otp_view(request):
         user_id = request.session.get("user_id")
         otp_expiry = request.session.get("otp_expiry")
 
-        print("OTP Received:", input_otp)
-        print("Session OTP:", session_otp)
-        print("User ID:", user_id)
-        print("OTP Expiry:", otp_expiry)
+        logging.info(f"OTP Received: {input_otp}, Session OTP: {session_otp}, User ID: {user_id}, OTP Expiry: {otp_expiry}")
 
         if otp_expiry:
             otp_expiry_time = timezone.datetime.fromisoformat(otp_expiry)
@@ -154,14 +138,15 @@ def verify_otp_view(request):
             try:
                 user = User.objects.get(id=user_id)
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                # Call this if profile/email notification needed
-                # _check_profile_and_send_email(user)
+
+                # Clear OTP-related session data
                 for k in ["otp", "user_id", "otp_expiry"]:
                     request.session.pop(k, None)
-                print("OTP verified, redirecting to dashboard")
+
+                messages.success(request, "✅ OTP verified successfully!")
                 return redirect("dashboard")
             except Exception as e:
-                print("OTP verification error:", e)
+                logging.error("OTP verification error: %s", e, exc_info=True)
                 messages.error(request, "An error occurred. Please login again.")
                 return redirect("login")
 
@@ -169,7 +154,6 @@ def verify_otp_view(request):
         return redirect("verify_otp")
 
     return render(request, "users/verify_otp.html")
-
 # ------------------- Resend OTP -------------------
 def resend_otp_view(request):
     user_id = request.session.get("user_id")
@@ -213,40 +197,48 @@ def update_email_view(request):
     return render(request, "users/update_email.html")
 
 
-# ------------------- Dashboard -------------------
-
-
-
-
-
-# ------------------- Dashboard Page -------------------
-
 # =========================================================
-# DASHBOARD VIEW
+# DASHBOARD VIEW (Shows Gmail + Transactions + Suggestions)
 # =========================================================
 @login_required(login_url="login")
 def dashboard_view(request):
     """
-    Display the user dashboard with live Gmail + transaction data.
+    Display the user dashboard with Gmail + transaction data.
+    This version ensures emails fetched via connect_gmail()
+    or live API call are correctly displayed.
     """
     try:
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
         if not profile.is_complete():
-            messages.warning(request, "⚠️ Your profile is incomplete. Please update it.")
+            messages.warning(request, "⚠ Your profile is incomplete. Please update it.")
 
-        # ✅ Fetch live Gmail data instead of using session
-        from users.utils import fetch_latest_emails, fetch_recent_transactions, save_transactions_to_db
+        # ---------------- Gmail data load ----------------
+        # First check if Gmail data already exists in session
+        latest_emails = request.session.get("latest_emails", [])
+        gmail_transactions = request.session.get("gmail_transactions", [])
+        connected_gmail = request.session.get("connected_gmail")
 
-        latest_emails = fetch_latest_emails(request.user, max_results=5)
-        gmail_transactions = fetch_recent_transactions(request.user, max_results=25)
-        if gmail_transactions:
-            save_transactions_to_db(request.user, gmail_transactions)
-            gmail_connected = True
-        else:
-            gmail_connected = False
+        # If not available, fetch fresh data
+        if not latest_emails:
+            try:
+                latest_emails = fetch_latest_emails(request.user, max_results=5)
+            except Exception as e:
+                logging.warning(f"Gmail fetch error (emails): {e}")
+                latest_emails = []
 
-        # Smart Suggestions
+        if not gmail_transactions:
+            try:
+                gmail_transactions = fetch_recent_transactions(request.user, max_results=25)
+                if gmail_transactions:
+                    save_transactions_to_db(request.user, gmail_transactions)
+            except Exception as e:
+                logging.warning(f"Gmail fetch error (transactions): {e}")
+                gmail_transactions = []
+
+        gmail_connected = bool(latest_emails or gmail_transactions or connected_gmail)
+
+        # ---------------- Smart Suggestions ----------------
         suggestions_qs = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")[:5]
         suggestions = [
             {
@@ -257,10 +249,12 @@ def dashboard_view(request):
             for s in suggestions_qs
         ]
 
+        # ---------------- Context ----------------
         context = {
             "profile": profile,
             "income": profile.income or 0.0,
             "gmail_connected": gmail_connected,
+            "connected_gmail": connected_gmail,
             "latest_emails": latest_emails,
             "gmail_transactions": gmail_transactions,
             "suggestions": suggestions,
@@ -269,10 +263,9 @@ def dashboard_view(request):
         return render(request, "users/dashboard.html", context)
 
     except Exception as e:
-        print("❌ Dashboard error:", e)
+        logging.error(f"❌ Dashboard error: {e}", exc_info=True)
         messages.error(request, f"Something went wrong loading your dashboard: {str(e)}")
         return redirect("home")
-
 
 
 # =========================================================
@@ -304,12 +297,12 @@ def get_dashboard_data(request):
     # --- Alerts ---
     alerts = []
     if total_income > 0 and total_spending > Decimal("0.7") * total_income:
-        alerts.append("⚠️ High spending: over 70% of your income.")
+        alerts.append("⚠ High spending: over 70% of your income.")
     if savings < 0:
-        alerts.append("⚠️ Overspending: negative savings.")
+        alerts.append("⚠ Overspending: negative savings.")
     fraud_count = transactions.filter(is_fraud=True).count()
     if fraud_count:
-        alerts.append(f"⚠️ {fraud_count} fraud transactions detected!")
+        alerts.append(f"⚠ {fraud_count} fraud transactions detected!")
 
     # --- Category Spending (bar chart) ---
     category_spending = list(
@@ -335,7 +328,6 @@ def get_dashboard_data(request):
     for days in [7, 30, 90]:
         start = now - timezone.timedelta(days=days)
         qs = transactions.filter(timestamp__gte=start)
-
         daily_data = (
             qs.filter(transaction_type="debit")
             .extra(select={"day": "date(timestamp)"})
@@ -384,44 +376,70 @@ def get_dashboard_data(request):
     })
 
 
-# ------------------- Connect Gmail -------------------
+
+# ------------------- Gmail Connection -------------------
+
 @login_required
 def connect_gmail(request):
-    """Fetch Gmail data using users.utils and capture Gmail account"""
+    """Fetch Gmail data and ensure they appear on dashboard."""
     try:
+        from users.utils import (
+            fetch_latest_emails,
+            fetch_recent_transactions,
+            save_transactions_to_db,
+            get_gmail_profile,
+        )
+
+        # Fetch Gmail data
         latest_emails = fetch_latest_emails(request.user, max_results=5)
         transactions = fetch_recent_transactions(request.user, max_results=10)
 
-        # ✅ Optional: get Gmail profile (if your utils support it)
+        # ✅ Get connected Gmail address (if available)
+        connected_gmail = None
         try:
             gmail_profile = get_gmail_profile(request.user)
             connected_gmail = gmail_profile.get("emailAddress") if gmail_profile else None
         except Exception:
-            connected_gmail = None
+            pass
 
+        # If profile fetch failed, fallback to extracting from first email
         if not connected_gmail and latest_emails:
-            # Fallback: extract from emails
             first_email = latest_emails[0]
             connected_gmail = first_email.get("to") or first_email.get("from")
 
+        # ✅ Save transactions to DB
         if transactions:
             save_transactions_to_db(request.user, transactions)
 
-        # ✅ Save to session
+        # ✅ Cache results to session (for dashboard fallback)
         request.session["gmail_connected"] = True
         request.session["latest_emails"] = latest_emails
         request.session["gmail_transactions"] = transactions
         request.session["connected_gmail"] = connected_gmail
 
         messages.success(request, "✅ Gmail connected and data fetched successfully!")
+
     except Exception as e:
-        print("⚠️ Gmail connection error:", e)
+        print("⚠ Gmail connection error:", e)
         messages.error(request, f"Error connecting Gmail: {str(e)}")
 
     return redirect("dashboard")
 
 
+# ------------------- Dashboard Helper -------------------
+
+def _get_cached_gmail_data(request):
+    """Return Gmail data either from session cache or empty fallback."""
+    return {
+        "latest_emails": request.session.get("latest_emails", []),
+        "gmail_transactions": request.session.get("gmail_transactions", []),
+        "gmail_connected": request.session.get("gmail_connected", False),
+        "connected_gmail": request.session.get("connected_gmail", None),
+    }
+
+
 # ------------------- Logout -------------------
+
 @login_required
 def logout_view(request):
     logout(request)
@@ -430,6 +448,7 @@ def logout_view(request):
 
 
 # ------------------- Profile -------------------
+
 @login_required
 def profile_view(request):
     profile, _ = UserProfile.objects.get_or_create(
@@ -451,10 +470,15 @@ def profile_view(request):
         u_form = UserUpdateForm(instance=request.user)
         p_form = ProfileUpdateForm(instance=profile)
 
-    return render(request, "users/profile.html", {"u_form": u_form, "p_form": p_form, "profile": profile})
+    return render(
+        request,
+        "users/profile.html",
+        {"u_form": u_form, "p_form": p_form, "profile": profile},
+    )
 
 
 # ------------------- Misc Pages -------------------
+
 @login_required
 def assistance_view(request):
     return redirect("assist_home")
@@ -478,6 +502,7 @@ def settings(request):
 
 
 # ------------------- Helper -------------------
+
 def _check_profile_and_send_email(user):
     try:
         profile = user.profile
@@ -493,46 +518,40 @@ def _check_profile_and_send_email(user):
         pass
 
 
-
+# ------------------- Test Views -------------------
 
 @login_required
 def test_email_view(request):
     """Test email sending functionality"""
     try:
         result = send_mail(
-            subject='🧪 Test Email from FinSecure',
-            message='This is a test email to verify your SendGrid configuration is working correctly.',
+            subject="🧪 Test Email from FinSecure",
+            message="This is a test email to verify your configuration.",
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[request.user.email],  # Send to logged-in user
+            recipient_list=[request.user.email],
             fail_silently=False,
         )
-        
         if result == 1:
-            messages.success(request, f'✅ Test email sent successfully to {request.user.email}')
+            messages.success(request, f"✅ Test email sent successfully to {request.user.email}")
             return HttpResponse(f"✅ Email sent successfully to {request.user.email}! Check your inbox.")
         else:
-            messages.error(request, '❌ Email sending failed - no exception but result was 0')
+            messages.error(request, "❌ Email sending failed (result = 0)")
             return HttpResponse("❌ Email failed to send (result = 0)")
-            
     except Exception as e:
-        messages.error(request, f'❌ Email error: {str(e)}')
-        return HttpResponse(f"❌ Email sending failed with error: {str(e)}")
+        messages.error(request, f"❌ Email error: {str(e)}")
+        return HttpResponse(f"❌ Email sending failed: {str(e)}")
 
 
 @login_required
 def test_messages_view(request):
     """Test Django messages functionality"""
-    messages.success(request, '✅ Success message test!')
-    messages.info(request, 'ℹ️ Info message test!')
-    messages.warning(request, '⚠️ Warning message test!')
-    messages.error(request, '❌ Error message test!')
-    
-    from django.shortcuts import redirect
-    return redirect('dashboard')
+    messages.success(request, "✅ Success message test!")
+    messages.info(request, "ℹ Info message test!")
+    messages.warning(request, "⚠ Warning message test!")
+    messages.error(request, "❌ Error message test!")
+    return redirect("dashboard")
 
-from django.http import HttpResponse
 from django.core.management import call_command
-
 def run_temp_superuser(request):
-    call_command('create_or_reset_superuser')  # your custom command
+    call_command("create_or_reset_superuser")
     return HttpResponse("Superuser created or reset. Delete this view after use.")
