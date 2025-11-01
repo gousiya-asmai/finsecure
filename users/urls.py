@@ -5,7 +5,7 @@ from django.contrib.auth import views as auth_views
 from . import views
 from assistance import views as assistance_views
 from django.urls import path
-from .views import run_temp_superuser
+
 
 urlpatterns = [
     # --- Home ---
@@ -22,11 +22,16 @@ urlpatterns = [
     # Use either users.dashboard_view or assistance.dashboard — not both
     # If your dashboard belongs to assistance app, keep the line below:
     path("dashboard/", assistance_views.dashboard, name="dashboard"),
-    
+
+    path('dashboard/', views.dashboard_view, name='dashboard'),
+
+    # ... other URLs
+
+
 
 
     # your other paths
-    path('run-superuser/', run_temp_superuser),  # temporary for superuser creation
+     # temporary for superuser creation
 
     # If dashboard belongs to users app instead, use:
     # path("dashboard/", views.dashboard_view, name="dashboard"),
@@ -34,7 +39,7 @@ urlpatterns = [
     path("profile/", views.profile_view, name="profile"),
 
     # --- Assistance & Fraud Detection ---
-    path("assistance/", views.assistance_view, name="assistance"),
+    
     path("fraud_check/", views.fraud_check_view, name="fraud_check"),
     path("dashboard-data/", views.get_dashboard_data, name="get_dashboard_data"),
     path("fraud-alerts/", views.fraud_alerts, name="fraud_alerts"),

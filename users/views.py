@@ -5,21 +5,26 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
 from django.utils import timezone
 from django.db.models import Sum, Count
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from decimal import Decimal
-from datetime import timedelta
-import random
 import logging
+from users.models import GmailTransaction, GmailCredential
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+import os
+import google.auth
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
 
 # Models
 from transactions.models import Transaction
 from assistance.models import SmartSuggestion
 from users.models import UserProfile
-
+from google_auth_oauthlib.flow import InstalledAppFlow
 # Utils
 from users.utils import (
     fetch_latest_emails,
@@ -27,10 +32,13 @@ from users.utils import (
     save_transactions_to_db,
     get_gmail_profile,
 )
-from users.otp_utils import send_otp_via_sendgrid
+from users.otp_utils import generate_and_send_otp, verify_otp
 
 # Forms
 from users.forms import UserUpdateForm, ProfileUpdateForm
+from datetime import datetime
+from users.utils import fetch_latest_emails, fetch_recent_transactions, get_gmail_profile
+
 
 
 # ------------------- Home -------------------
@@ -91,26 +99,20 @@ def login_view(request):
         # Email + OTP login
         elif email:
             user_qs = User.objects.filter(email=email)
-            if user_qs.exists():
-                user = user_qs.first()
-                otp = random.randint(100000, 999999)
-                request.session["otp"] = str(otp)
-                request.session["user_id"] = user.id
-                request.session["otp_expiry"] = (timezone.now() + timedelta(minutes=5)).isoformat()
-
-                try:
-                    response_code = send_otp_via_sendgrid(email, otp)
-                    if response_code == 202:
-                        messages.success(request, f"✅ OTP sent to {email}. Please verify.")
-                    else:
-                        messages.error(request, f"Failed to send OTP, status code: {response_code}")
-                    return redirect("verify_otp")
-                except Exception as e:
-                    logging.error(f"OTP email send error: {e}", exc_info=True)
-                    messages.error(request, f"Failed to send OTP: {str(e)}")
-                    return redirect("login")
-            else:
+            if not user_qs.exists():
                 messages.error(request, "❌ Email not registered")
+                return redirect("login")
+
+            user = user_qs.first()
+            try:
+                generate_and_send_otp(email)
+                request.session["otp_email"] = email
+                request.session["user_id"] = user.id
+                messages.success(request, f"✅ OTP sent to {email}. Please verify within 10 minutes.")
+                return redirect("verify_otp")
+            except Exception as e:
+                logging.error(f"OTP sending failed: {e}", exc_info=True)
+                messages.error(request, "❌ Failed to send OTP. Please try again later.")
                 return redirect("login")
 
     return render(request, "users/login.html")
@@ -118,67 +120,49 @@ def login_view(request):
 
 # ------------------- OTP Verification -------------------
 def verify_otp_view(request):
-    logging.info("verify_otp_view called - method: %s", request.method)
-
     if request.method == "POST":
-        input_otp = request.POST.get("otp")
-        session_otp = request.session.get("otp")
+        entered_otp = request.POST.get("otp")
+        email = request.session.get("otp_email")
         user_id = request.session.get("user_id")
-        otp_expiry = request.session.get("otp_expiry")
 
-        logging.info(f"OTP Received: {input_otp}, Session OTP: {session_otp}, User ID: {user_id}, OTP Expiry: {otp_expiry}")
+        if not email or not user_id:
+            messages.error(request, "Session expired. Please login again.")
+            return redirect("login")
 
-        if otp_expiry:
-            otp_expiry_time = timezone.datetime.fromisoformat(otp_expiry)
-            if timezone.now() > otp_expiry_time:
-                messages.error(request, "⏳ OTP expired. Please request a new one.")
-                return redirect("login")
-
-        if session_otp and input_otp == session_otp:
+        if verify_otp(email, entered_otp):
             try:
                 user = User.objects.get(id=user_id)
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
-                # Clear OTP-related session data
-                for k in ["otp", "user_id", "otp_expiry"]:
+                # Clear session
+                for k in ["otp_email", "user_id"]:
                     request.session.pop(k, None)
 
                 messages.success(request, "✅ OTP verified successfully!")
                 return redirect("dashboard")
-            except Exception as e:
-                logging.error("OTP verification error: %s", e, exc_info=True)
-                messages.error(request, "An error occurred. Please login again.")
+            except User.DoesNotExist:
+                messages.error(request, "User not found. Please login again.")
                 return redirect("login")
-
-        messages.error(request, "❌ Invalid OTP. Try again.")
-        return redirect("verify_otp")
+        else:
+            messages.error(request, "❌ Invalid or expired OTP. Please try again.")
+            return redirect("verify_otp")
 
     return render(request, "users/verify_otp.html")
+
+
 # ------------------- Resend OTP -------------------
 def resend_otp_view(request):
-    user_id = request.session.get("user_id")
-    if not user_id:
+    email = request.session.get("otp_email")
+    if not email:
         messages.error(request, "Session expired. Please login again.")
         return redirect("login")
 
     try:
-        user = User.objects.get(id=user_id)
-        otp = random.randint(100000, 999999)
-        request.session["otp"] = str(otp)
-        request.session["otp_expiry"] = (timezone.now() + timezone.timedelta(minutes=5)).isoformat()
-
-        send_mail(
-            subject="Your Login OTP",
-            message=f"Your OTP for login is: {otp}\n\n(Valid for 5 minutes)",
-            from_email="finsecure7@gmail.com",
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-        messages.success(request, f"🔄 OTP resent to {user.email}. Please verify.")
-    except User.DoesNotExist:
-        messages.error(request, "User session expired. Please login again.")
-        return redirect("login")
-
+        generate_and_send_otp(email)
+        messages.success(request, f"🔄 New OTP sent to {email}. Please verify within 10 minutes.")
+    except Exception as e:
+        logging.error(f"Error resending OTP: {e}", exc_info=True)
+        messages.error(request, "❌ Failed to resend OTP. Try again later.")
     return redirect("verify_otp")
 
 
@@ -199,46 +183,48 @@ def update_email_view(request):
 
 # =========================================================
 # DASHBOARD VIEW (Shows Gmail + Transactions + Suggestions)
+# ========================================================
+
 # =========================================================
+# DASHBOARD VIEW
+# =========================================================
+
 @login_required(login_url="login")
 def dashboard_view(request):
-    """
-    Display the user dashboard with Gmail + transaction data.
-    This version ensures emails fetched via connect_gmail()
-    or live API call are correctly displayed.
-    """
     try:
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
+        # Warn if profile incomplete
         if not profile.is_complete():
             messages.warning(request, "⚠ Your profile is incomplete. Please update it.")
 
-        # ---------------- Gmail data load ----------------
-        # First check if Gmail data already exists in session
-        latest_emails = request.session.get("latest_emails", [])
-        gmail_transactions = request.session.get("gmail_transactions", [])
+        # ✅ Get Gmail data from session
+        latest_emails = request.session.get("latest_emails")
+        gmail_transactions = request.session.get("gmail_transactions")
         connected_gmail = request.session.get("connected_gmail")
+        gmail_connected = request.session.get("gmail_connected", False)
 
-        # If not available, fetch fresh data
-        if not latest_emails:
+        # ✅ If not in session, try to load from DB
+        if not gmail_transactions:
+            try:
+                gmail_transactions = list(
+                    GmailTransaction.objects.filter(user=request.user)
+                    .order_by("-created_at")
+                    .values("description", "amount", "currency", "message_id")[:10]
+                )
+            except Exception as e:
+                logging.warning(f"Failed to load Gmail transactions from DB: {e}")
+                gmail_transactions = []
+
+        # ✅ If no latest emails, try fetching directly
+        if not latest_emails and gmail_connected:
             try:
                 latest_emails = fetch_latest_emails(request.user, max_results=5)
             except Exception as e:
-                logging.warning(f"Gmail fetch error (emails): {e}")
+                logging.warning(f"Error fetching latest Gmail emails: {e}")
                 latest_emails = []
 
-        if not gmail_transactions:
-            try:
-                gmail_transactions = fetch_recent_transactions(request.user, max_results=25)
-                if gmail_transactions:
-                    save_transactions_to_db(request.user, gmail_transactions)
-            except Exception as e:
-                logging.warning(f"Gmail fetch error (transactions): {e}")
-                gmail_transactions = []
-
-        gmail_connected = bool(latest_emails or gmail_transactions or connected_gmail)
-
-        # ---------------- Smart Suggestions ----------------
+        # ✅ Smart Suggestions
         suggestions_qs = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")[:5]
         suggestions = [
             {
@@ -249,34 +235,34 @@ def dashboard_view(request):
             for s in suggestions_qs
         ]
 
-        # ---------------- Context ----------------
+        # ✅ Context for template
         context = {
             "profile": profile,
-            "income": profile.income or 0.0,
+            "income": profile.income if profile else 0.0,
             "gmail_connected": gmail_connected,
             "connected_gmail": connected_gmail,
-            "latest_emails": latest_emails,
-            "gmail_transactions": gmail_transactions,
+            "latest_emails": latest_emails or [],
+            "gmail_transactions": gmail_transactions or [],
             "suggestions": suggestions,
         }
 
         return render(request, "users/dashboard.html", context)
 
     except Exception as e:
-        logging.error(f"❌ Dashboard error: {e}", exc_info=True)
-        messages.error(request, f"Something went wrong loading your dashboard: {str(e)}")
+        logging.error(f"❌ Dashboard load error: {e}", exc_info=True)
+        messages.error(request, "Something went wrong loading your dashboard.")
         return redirect("home")
 
 
 # =========================================================
 # AJAX DASHBOARD DATA (for charts)
 # =========================================================
+# =========================================================
+# AJAX DASHBOARD DATA (for charts)
+# =========================================================
 @login_required
 def get_dashboard_data(request):
-    """
-    Returns transaction summary data (income, spending, savings, fraud stats)
-    as JSON for the dashboard graphs.
-    """
+    from users.models import UserProfile  # ensure imported
     user = request.user
     period = request.GET.get("period", "all")
     transactions = Transaction.objects.filter(user=user)
@@ -289,9 +275,19 @@ def get_dashboard_data(request):
         start_date = timezone.now() - timezone.timedelta(days=30)
         transactions = transactions.filter(timestamp__gte=start_date)
 
-    # --- Totals ---
-    total_income = transactions.filter(transaction_type="credit").aggregate(Sum("amount"))["amount__sum"] or Decimal("0.0")
-    total_spending = transactions.filter(transaction_type="debit").aggregate(Sum("amount"))["amount__sum"] or Decimal("0.0")
+    # --- Fetch profile income ---
+    profile = UserProfile.objects.filter(user=user).first()
+    profile_income = Decimal(str(profile.income)) if profile and profile.income else Decimal("0.0")
+
+    # --- Calculate totals ---
+    total_income = (
+        transactions.filter(transaction_type="credit").aggregate(Sum("amount"))["amount__sum"]
+        or profile_income
+    )
+    total_spending = (
+        transactions.filter(transaction_type="debit").aggregate(Sum("amount"))["amount__sum"]
+        or Decimal("0.0")
+    )
     savings = total_income - total_spending
 
     # --- Alerts ---
@@ -304,7 +300,7 @@ def get_dashboard_data(request):
     if fraud_count:
         alerts.append(f"⚠ {fraud_count} fraud transactions detected!")
 
-    # --- Category Spending (bar chart) ---
+    # --- Category Spending ---
     category_spending = list(
         transactions.filter(transaction_type="debit")
         .values("category")
@@ -312,14 +308,14 @@ def get_dashboard_data(request):
         .order_by("-total")
     )
 
-    # --- Fraud Stats (count chart) ---
+    # --- Fraud Stats ---
     fraud_stats = list(
         transactions.values("is_fraud")
         .annotate(count=Count("id"))
         .order_by("-is_fraud")
     )
 
-    # --- Time-Series (line chart) ---
+    # --- Spending Graphs ---
     now = timezone.now()
     labels_7d, spending_7d = [], []
     labels_30d, spending_30d = [], []
@@ -336,8 +332,17 @@ def get_dashboard_data(request):
             .order_by("day")
         )
 
-        labels_list = [d["day"].strftime("%b %d") for d in daily_data]
-        values_list = [float(d["total"]) for d in daily_data]
+        labels_list, values_list = [], []
+        for d in daily_data:
+            try:
+                date_obj = (
+                    d["day"] if isinstance(d["day"], datetime)
+                    else datetime.strptime(str(d["day"]), "%Y-%m-%d")
+                )
+                labels_list.append(date_obj.strftime("%b %d"))
+            except Exception:
+                labels_list.append(str(d["day"]))
+            values_list.append(float(d["total"]))
 
         if days == 7:
             labels_7d, spending_7d = labels_list, values_list
@@ -346,7 +351,7 @@ def get_dashboard_data(request):
         else:
             labels_all, spending_all = labels_list, values_list
 
-    # --- Fraud amount over time (line chart) ---
+    # --- Fraud Graphs ---
     fraud_qs = transactions.filter(is_fraud=True)
     fraud_daily = (
         fraud_qs.extra(select={"day": "date(timestamp)"})
@@ -354,10 +359,19 @@ def get_dashboard_data(request):
         .annotate(total=Sum("amount"))
         .order_by("day")
     )
-    fraud_labels = [d["day"].strftime("%b %d") for d in fraud_daily]
-    fraud_amount = [float(d["total"]) for d in fraud_daily]
 
-    # --- Return JSON ---
+    fraud_labels, fraud_amount = [], []
+    for d in fraud_daily:
+        try:
+            date_obj = (
+                d["day"] if isinstance(d["day"], datetime)
+                else datetime.strptime(str(d["day"]), "%Y-%m-%d")
+            )
+            fraud_labels.append(date_obj.strftime("%b %d"))
+        except Exception:
+            fraud_labels.append(str(d["day"]))
+        fraud_amount.append(float(d["total"]))
+
     return JsonResponse({
         "income": float(total_income),
         "spending": float(total_spending),
@@ -377,69 +391,77 @@ def get_dashboard_data(request):
 
 
 
-# ------------------- Gmail Connection -------------------
+# =========================================================
+# GMAIL CONNECTION HANDLER
+# =========================================================
 
 @login_required
 def connect_gmail(request):
-    """Fetch Gmail data and ensure they appear on dashboard."""
+    """
+    Connect Gmail using OAuth2, save tokens per user,
+    fetch latest emails and transactions, and update session + DB.
+    """
+    user = request.user
     try:
-        from users.utils import (
-            fetch_latest_emails,
-            fetch_recent_transactions,
-            save_transactions_to_db,
-            get_gmail_profile,
-        )
+        # ✅ Ensure token directory exists
+        TOKENS_DIR = os.path.join(settings.BASE_DIR, "tokens")
+        os.makedirs(TOKENS_DIR, exist_ok=True)
 
-        # Fetch Gmail data
-        latest_emails = fetch_latest_emails(request.user, max_results=5)
-        transactions = fetch_recent_transactions(request.user, max_results=10)
+        token_path = os.path.join(TOKENS_DIR, f"token_{user.id}.json")
+        creds = None
 
-        # ✅ Get connected Gmail address (if available)
-        connected_gmail = None
-        try:
-            gmail_profile = get_gmail_profile(request.user)
-            connected_gmail = gmail_profile.get("emailAddress") if gmail_profile else None
-        except Exception:
-            pass
+        # ✅ Load credentials if already saved
+        if os.path.exists(token_path):
+            creds = Credentials.from_authorized_user_file(token_path)
+            logging.info(f"🔑 Loaded existing Gmail token for {user.username}")
 
-        # If profile fetch failed, fallback to extracting from first email
-        if not connected_gmail and latest_emails:
-            first_email = latest_emails[0]
-            connected_gmail = first_email.get("to") or first_email.get("from")
+        # ✅ If no valid creds, run OAuth flow
+        if not creds or not creds.valid:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                os.path.join(settings.BASE_DIR, "credentials.json"),
+                scopes=[
+                    "https://www.googleapis.com/auth/gmail.readonly",
+                    "https://www.googleapis.com/auth/userinfo.email",
+                    "openid",
+                ],
+            )
 
-        # ✅ Save transactions to DB
-        if transactions:
-            save_transactions_to_db(request.user, transactions)
+            # For local dev, open a browser; on Render, redirect via host domain
+            creds = flow.run_local_server(port=0)
 
-        # ✅ Cache results to session (for dashboard fallback)
+            # ✅ Save user-specific token
+            with open(token_path, "w") as token_file:
+                token_file.write(creds.to_json())
+            logging.info(f"✅ Saved Gmail token for {user.username} → {token_path}")
+
+        # ✅ Get Gmail profile
+        gmail_profile = get_gmail_profile(user)
+        connected_gmail = gmail_profile.get("emailAddress", "Unknown")
+
+        # ✅ Fetch recent Gmail data
+        latest_emails = fetch_latest_emails(user, max_results=5)
+        transactions = fetch_recent_transactions(user, max_results=10)
+
+        # ✅ Save to session
         request.session["gmail_connected"] = True
+        request.session["connected_gmail"] = connected_gmail
         request.session["latest_emails"] = latest_emails
         request.session["gmail_transactions"] = transactions
-        request.session["connected_gmail"] = connected_gmail
 
-        messages.success(request, "✅ Gmail connected and data fetched successfully!")
+        # ✅ Persist transactions in DB
+        if transactions:
+            save_transactions_to_db(user, transactions)
+            logging.info(f"💾 Saved {len(transactions)} Gmail transactions for {user.username}")
+
+        messages.success(request, f"✅ Gmail connected successfully as {connected_gmail}!")
 
     except Exception as e:
-        print("⚠ Gmail connection error:", e)
-        messages.error(request, f"Error connecting Gmail: {str(e)}")
+        logging.error(f"❌ Gmail connection failed for {user.username}: {e}", exc_info=True)
+        messages.error(request, f"⚠ Gmail connection failed: {str(e)}")
 
     return redirect("dashboard")
 
-
-# ------------------- Dashboard Helper -------------------
-
-def _get_cached_gmail_data(request):
-    """Return Gmail data either from session cache or empty fallback."""
-    return {
-        "latest_emails": request.session.get("latest_emails", []),
-        "gmail_transactions": request.session.get("gmail_transactions", []),
-        "gmail_connected": request.session.get("gmail_connected", False),
-        "connected_gmail": request.session.get("connected_gmail", None),
-    }
-
-
 # ------------------- Logout -------------------
-
 @login_required
 def logout_view(request):
     logout(request)
@@ -448,7 +470,6 @@ def logout_view(request):
 
 
 # ------------------- Profile -------------------
-
 @login_required
 def profile_view(request):
     profile, _ = UserProfile.objects.get_or_create(
@@ -478,7 +499,6 @@ def profile_view(request):
 
 
 # ------------------- Misc Pages -------------------
-
 @login_required
 def assistance_view(request):
     return redirect("assist_home")
@@ -502,11 +522,11 @@ def settings(request):
 
 
 # ------------------- Helper -------------------
-
 def _check_profile_and_send_email(user):
     try:
         profile = user.profile
         if not profile.is_complete():
+            from django.core.mail import send_mail
             send_mail(
                 subject="Complete Your Profile",
                 message="Your profile is incomplete. Please update it.",
@@ -517,13 +537,24 @@ def _check_profile_and_send_email(user):
     except UserProfile.DoesNotExist:
         pass
 
+@login_required(login_url='login')
+def update_profile_view(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        profile.phone = request.POST.get("phone")
+        profile.occupation = request.POST.get("occupation")
+        income_value = request.POST.get("income")
+        profile.income = float(income_value) if income_value else 0.0
+        profile.save()
+        messages.success(request, "✅ Profile updated successfully!")
+        return redirect("dashboard")
+    return render(request, "users/update_profile.html", {"profile": profile})
 
 # ------------------- Test Views -------------------
-
 @login_required
 def test_email_view(request):
-    """Test email sending functionality"""
     try:
+        from django.core.mail import send_mail
         result = send_mail(
             subject="🧪 Test Email from FinSecure",
             message="This is a test email to verify your configuration.",
@@ -544,12 +575,12 @@ def test_email_view(request):
 
 @login_required
 def test_messages_view(request):
-    """Test Django messages functionality"""
     messages.success(request, "✅ Success message test!")
     messages.info(request, "ℹ Info message test!")
     messages.warning(request, "⚠ Warning message test!")
     messages.error(request, "❌ Error message test!")
     return redirect("dashboard")
+
 
 from django.core.management import call_command
 def run_temp_superuser(request):

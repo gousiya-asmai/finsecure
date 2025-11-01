@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load humanize %}
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
@@ -330,7 +331,9 @@ body {
         <p><strong>📧 Email:</strong> {{ user.email }}</p>
         <p><strong>📞 Phone:</strong> {{ user.profile.phone|default:"Not set" }}</p>
         <p><strong>💼 Occupation:</strong> {{ user.profile.occupation|default:"Not set" }}</p>
-        <p><strong>💰 Income:</strong> ₹<span id="income">{{ income|default:user.profile.income|default:"0.00"|floatformat:2 }}</span></p>
+        <p><strong>💰 Income:</strong> ₹<span id="income">{{ profile.income|default:"0"|floatformat:2|intcomma }}</span></p>
+
+
       </div>
       <div style="margin-top: 15px;">
         <a href="{% url 'profile' %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i> Update Profile</a>

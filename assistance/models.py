@@ -6,7 +6,7 @@ from django.utils import timezone
 # --- Model 1: Assistance Results linked to UserProfile ---
 class AssistanceResult(models.Model):
     user = models.ForeignKey(
-        'users.UserProfile',  # linked to UserProfile
+        'users.UserProfile',  # linked to UserProfile model in users app
         on_delete=models.CASCADE,
         related_name="assistance_results"
     )
@@ -17,12 +17,13 @@ class AssistanceResult(models.Model):
 
     def __str__(self):
         status = "Required" if self.assistance_required else "Not Required"
-        return f"Assistance for {self.user.user.username} ({status}) on {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+        username = self.user.user.username if self.user and self.user.user else "Unknown"
+        return f"Assistance for {username} ({status}) on {self.created_at.strftime('%Y-%m-%d %H:%M')}"
 
 
 # --- Model 2: Financial Profile (One record per user per month) ---
 class FinancialProfile(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)  # many submissions over time
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     income = models.FloatField(default=0.0)
     expenses = models.FloatField(default=0.0)
     credit_score = models.IntegerField(default=0)
@@ -34,12 +35,11 @@ class FinancialProfile(models.Model):
     )
     monthly_investments = models.FloatField(default=0.0)
     financial_goals = models.TextField(blank=True, null=True)
-    submitted_at = models.DateTimeField(default=timezone.now)  # track submission time
-    suggestion = models.TextField(blank=True, null=True)  # store auto-generated suggestions
+    submitted_at = models.DateTimeField(default=timezone.now)
+    suggestion = models.TextField(blank=True, null=True)
 
     class Meta:
-        ordering = ['-submitted_at']  # latest first
-        unique_together = ('user', 'submitted_at')  # prevents duplicate same-time entries
+        ordering = ['-submitted_at']
 
     def __str__(self):
         return f"{self.user.username} | {self.submitted_at.strftime('%B %Y')}"
@@ -65,26 +65,11 @@ class SmartSuggestion(models.Model):
     )
     suggestion = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    is_alert = models.BooleanField(default=False)  # ⚠️ Flag for risky suggestions
+    is_alert = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ["-created_at"]  # latest first
+        ordering = ["-created_at"]
 
     def __str__(self):
         tag = "⚠️" if self.is_alert else "💡"
         return f"{tag} {self.user.username} - {self.suggestion[:50]}"
-
-
-# --- ✅ Model 5: Gmail Credentials per User ---
-class GmailCredential(models.Model):
-    user = models.OneToOneField(
-        User,
-        on_delete=models.CASCADE,
-        related_name="gmail_credential"
-    )
-    token = models.JSONField()  # store full Gmail OAuth token as JSON
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Gmail credentials for {self.user.username}"

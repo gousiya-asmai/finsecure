@@ -2,7 +2,8 @@
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from assistance.models import GmailCredential  # adjust path if your model is in assistance
+from users.models import GmailCredential
+ # adjust path if your model is in assistance
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 

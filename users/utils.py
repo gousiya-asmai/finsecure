@@ -1,12 +1,68 @@
 import re
 import base64
 import json
+import logging
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-from assistance.models import GmailCredential
+from google.auth.transport.requests import Request
+from users.models import GmailCredential
 from transactions.models import Transaction
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from .models import GmailCredential
+import json, logging
+
+logger = logging.getLogger(__name__)
+
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/gmail.labels",
+]
+
+def get_gmail_credentials(user):
+    """
+    Retrieve Gmail credentials from DB and refresh automatically if expired.
+    """
+    try:
+        cred_obj = GmailCredential.objects.get(user=user)
+
+        # ✅ Build token data properly
+        token_data = {
+            "token": cred_obj.access_token,
+            "refresh_token": cred_obj.refresh_token,
+            "token_uri": cred_obj.token_uri,
+            "client_id": cred_obj.client_id,
+            "client_secret": cred_obj.client_secret,
+            "scopes": json.loads(cred_obj.scopes)
+            if isinstance(cred_obj.scopes, str)
+            else cred_obj.scopes,
+        }
+
+        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+
+        # 🔄 Refresh token if expired
+        if not creds.valid or creds.expired:
+            if creds.refresh_token:
+                creds.refresh(Request())
+                # ✅ Update DB with new access token and expiry
+                cred_obj.access_token = creds.token
+                cred_obj.expiry = creds.expiry
+                cred_obj.save(update_fields=["access_token", "expiry"])
+                logger.info(f"🔄 Refreshed Gmail token for user {user.username}.")
+            else:
+                logger.warning(f"⚠️ No refresh token found for {user.username}, re-auth needed.")
+                return None
+
+        return creds
+
+    except GmailCredential.DoesNotExist:
+        logger.warning(f"⚠️ No Gmail credentials found for {user.username}.")
+        return None
+    except Exception as e:
+        logger.error(f"❌ Error loading Gmail credentials: {e}", exc_info=True)
+        return None
 
 
 # -------------------------------
@@ -14,20 +70,15 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 # -------------------------------
 def fetch_latest_emails(user, max_results=5):
     """
-    Fetch the latest Gmail emails for a user (non-transactional).
-    Returns a list of dicts with subject, from, date, and snippet.
+    Fetch the latest Gmail emails for a user.
     """
     try:
-        cred_obj = GmailCredential.objects.get(user=user)
-        token_data = json.loads(cred_obj.token) if isinstance(cred_obj.token, str) else cred_obj.token
+        creds = get_gmail_credentials(user)
+        if not creds:
+            return []
 
-        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
         service = build("gmail", "v1", credentials=creds)
-
-        results = service.users().messages().list(
-            userId="me", maxResults=max_results
-        ).execute()
-
+        results = service.users().messages().list(userId="me", maxResults=max_results).execute()
         messages = results.get("messages", [])
         emails = []
 
@@ -50,14 +101,11 @@ def fetch_latest_emails(user, max_results=5):
                 "snippet": snippet,
             })
 
-        print(f"✅ Fetched {len(emails)} latest email(s) for {user.username}.")
+        logging.info(f"✅ Fetched {len(emails)} latest email(s) for {user.username}.")
         return emails
 
-    except GmailCredential.DoesNotExist:
-        print("⚠️ No Gmail credentials found for user.")
-        return []
     except Exception as e:
-        print(f"❌ Error fetching latest emails: {e}")
+        logging.error(f"❌ Error fetching latest emails: {e}")
         return []
 
 
@@ -66,15 +114,14 @@ def fetch_latest_emails(user, max_results=5):
 # -------------------------------
 def fetch_recent_transactions(user, max_results=25):
     """
-    Fetch recent Gmail transaction-like emails and extract structured transaction data.
+    Fetch recent Gmail transaction-like emails and extract structured data.
     """
     try:
-        cred_obj = GmailCredential.objects.get(user=user)
-        token_data = json.loads(cred_obj.token) if isinstance(cred_obj.token, str) else cred_obj.token
+        creds = get_gmail_credentials(user)
+        if not creds:
+            return []
 
-        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
         service = build("gmail", "v1", credentials=creds)
-
         results = service.users().messages().list(
             userId="me",
             maxResults=max_results,
@@ -83,7 +130,7 @@ def fetch_recent_transactions(user, max_results=25):
 
         messages = results.get("messages", [])
         if not messages:
-            print(f"⚠️ No transaction-like emails found for {user.username}.")
+            logging.info(f"⚠️ No transaction-like emails found for {user.username}.")
             return []
 
         transactions, seen_keys = [], set()
@@ -97,7 +144,6 @@ def fetch_recent_transactions(user, max_results=25):
             parts = payload.get("parts", [])
             body_text = msg_data.get("snippet", "")
 
-            # Decode email body parts
             for part in parts:
                 data = part.get("body", {}).get("data")
                 if data:
@@ -107,15 +153,12 @@ def fetch_recent_transactions(user, max_results=25):
                     except Exception:
                         continue
 
-            # Clean text
             text = re.sub(r"\s+", " ", body_text).strip()
 
-            # Extract transaction details
             amt_match = re.search(r"Amount[:=\-]?\s*[₹$€]?\s?([\d,]+(?:\.\d{1,2})?)", text, re.I)
             cat_match = re.search(
                 r"Category[:=\-]?\s*([A-Za-z ]+?)(?=\s*(?:Transaction\s*Type|Type|Date|Amount|₹|$))",
-                text,
-                re.I,
+                text, re.I,
             )
             type_match = re.search(r"(?:Transaction\s*Type|Type)[:=\-]?\s*([A-Za-z]+)", text, re.I)
             date_match = re.search(r"Date[:=\-]?\s*([\d/\-\s:APMapm]+)", text, re.I)
@@ -125,7 +168,6 @@ def fetch_recent_transactions(user, max_results=25):
             txn_type = type_match.group(1).strip().lower() if type_match else ""
             date = date_match.group(1).strip() if date_match else ""
 
-            # Infer missing category/type intelligently
             if not category or category.lower() in ["", "uncategorized", "transaction type"]:
                 if re.search(r"\bcredited\b|\bdeposit(ed)?\b|\bincome\b", text, re.I):
                     category, txn_type = "Deposit", txn_type or "credit"
@@ -151,14 +193,11 @@ def fetch_recent_transactions(user, max_results=25):
                 "currency": "₹",
             })
 
-        print(f"✅ Parsed {len(transactions)} transaction(s) for {user.username}.")
+        logging.info(f"✅ Parsed {len(transactions)} transaction(s) for {user.username}.")
         return transactions
 
-    except GmailCredential.DoesNotExist:
-        print("⚠️ No Gmail credentials found for user.")
-        return []
     except Exception as e:
-        print(f"❌ Error fetching transactions: {e}")
+        logging.error(f"❌ Error fetching transactions: {e}")
         return []
 
 
@@ -178,7 +217,6 @@ def save_transactions_to_db(user, transactions):
         date = txn.get("date")
         currency = txn.get("currency", "₹")
 
-        # Avoid duplicates
         if Transaction.objects.filter(user=user, amount=amount, category=category, timestamp__date=date).exists():
             continue
 
@@ -191,7 +229,7 @@ def save_transactions_to_db(user, transactions):
         )
         saved_count += 1
 
-    print(f"💾 Saved {saved_count} new transactions for {user.username}.")
+    logging.info(f"💾 Saved {saved_count} new transactions for {user.username}.")
     return saved_count
 
 
@@ -208,10 +246,8 @@ def generate_suggestions(profile, transactions=None):
     goal = float(profile.get("monthly_savings_goal", 0))
     debts = float(profile.get("debts", 0))
     risk = profile.get("risk_tolerance", "medium").lower()
-
     available = income - expenses
 
-    # Core financial health checks
     if expenses > income:
         suggestions.append("⚠️ Your expenses exceed your income. Reduce non-essential spending.")
     else:
@@ -227,16 +263,14 @@ def generate_suggestions(profile, transactions=None):
     else:
         suggestions.append("✅ You’re debt-free. Great job!")
 
-    # Investment advice
     if available > 0:
         if risk == "low":
             suggestions.append(f"💡 Invest ₹{available:,.2f} in fixed deposits or bonds.")
         elif risk == "medium":
             suggestions.append(f"💡 Diversify: ₹{available*0.5:,.2f} in mutual funds, ₹{available*0.5:,.2f} in safe assets.")
         elif risk == "high":
-            suggestions.append(f"💡 Aggressive strategy: ₹{available*0.7:,.2f} in equities, ₹{available*0.3:,.2f} in stable funds.")
+            suggestions.append(f"💡 Aggressive: ₹{available*0.7:,.2f} in equities, ₹{available*0.3:,.2f} in stable funds.")
 
-    # Transaction-based alerts
     if transactions:
         seen_expenses = set()
         for txn in transactions:
@@ -246,7 +280,7 @@ def generate_suggestions(profile, transactions=None):
                 suggestions.append(f"⚠️ Large transaction detected: ₹{amt:,.2f} — {cat}. Review if necessary.")
                 seen_expenses.add((cat, amt))
             elif 20000 < amt <= 100000 and (cat, amt) not in seen_expenses:
-                suggestions.append(f"💡 Notable expense: ₹{amt:,.2f} in {cat}. Check if it fits your budget.")
+                suggestions.append(f"💡 Notable expense: ₹{amt:,.2f} in {cat}. Check your budget.")
                 seen_expenses.add((cat, amt))
     else:
         suggestions.append("💡 No unusual transactions detected recently.")
@@ -263,10 +297,10 @@ def get_gmail_profile(user):
     Return Gmail profile information for the connected account.
     """
     try:
-        cred_obj = GmailCredential.objects.get(user=user)
-        token_data = json.loads(cred_obj.token) if isinstance(cred_obj.token, str) else cred_obj.token
+        creds = get_gmail_credentials(user)
+        if not creds:
+            return None
 
-        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
         service = build("gmail", "v1", credentials=creds)
         profile = service.users().getProfile(userId="me").execute()
 
@@ -276,9 +310,6 @@ def get_gmail_profile(user):
             "threadsTotal": profile.get("threadsTotal"),
         }
 
-    except GmailCredential.DoesNotExist:
-        print("⚠️ No Gmail credentials found for user.")
-        return None
     except Exception as e:
-        print(f"❌ Error fetching Gmail profile: {e}")
+        logging.error(f"❌ Error fetching Gmail profile: {e}")
         return None
