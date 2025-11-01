@@ -18,3 +18,8 @@ __pycache__/
 venv/
 env/
 .fensecureenv/
+
+.env
+.env.local
+.env.production
+db.sqlite3
