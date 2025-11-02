@@ -18,13 +18,15 @@ urlpatterns = [
     path("resend_otp/", views.resend_otp_view, name="resend_otp"),
     path("logout/", views.logout_view, name="logout"),
 
+
+
     # --- Dashboard & Profile ---
     # Use either users.dashboard_view or assistance.dashboard — not both
     # If your dashboard belongs to assistance app, keep the line below:
-    path("dashboard/", assistance_views.dashboard, name="dashboard"),
-
-    path('dashboard/', views.dashboard_view, name='dashboard'),
-
+    path("dashboard/", assistance_views.dashboard_view, name="dashboard"),
+    
+    
+   
     # ... other URLs
 
 

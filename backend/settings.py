@@ -8,7 +8,7 @@ from django.contrib.messages import constants as messages
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ---------------- Environment ----------------
-ENV = os.getenv("ENV", "local")
+ENV = os.getenv("ENV", "local")  # "local" or "production"
 env_file = BASE_DIR / (".env.production" if ENV == "production" else ".env.local")
 
 if env_file.exists():
@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'django.contrib.humanize',
+    "django.contrib.humanize",
     "social_django",
     "django_q",
     "users",
@@ -84,7 +84,6 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
                 "social_django.context_processors.login_redirect",
-
             ],
         },
     },
@@ -118,15 +117,30 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
-# ---------------- Email (SendGrid) ----------------
+# ---------------- Email (Smart Gmail / SendGrid auto-switch) ----------------
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.sendgrid.net")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") == "True"
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "apikey")
-EMAIL_HOST_PASSWORD = os.getenv("SENDGRID_API_KEY")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "finsecure7@gmail.com")
+
+# If Gmail credentials exist in env, prefer Gmail setup
+if os.getenv("EMAIL_HOST_USER") and "gmail" in os.getenv("EMAIL_HOST_USER"):
+    EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+    EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+    EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") == "True"
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")  # Gmail App Password only
+    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+    print("📧 Using Gmail SMTP for outgoing mail")
+
+# Otherwise, fallback to SendGrid (Render recommended)
+else:
+    EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.sendgrid.net")
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+    EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+    EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") == "True"
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "apikey")
+    EMAIL_HOST_PASSWORD = os.getenv("SENDGRID_API_KEY")
+    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "finsecure7@gmail.com")
+    print("📧 Using SendGrid for outgoing mail")
 
 # ---------------- Google OAuth ----------------
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -137,11 +151,8 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = GOOGLE_CLIENT_ID
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = GOOGLE_CLIENT_SECRET
 
 # ---------------- 🔒 Gmail Token Storage ----------------
-# Local directory to store Gmail OAuth tokens safely
 TOKENS_DIR = BASE_DIR / "tokens"
 os.makedirs(TOKENS_DIR, exist_ok=True)
-
-# Full path for credentials.json (Google Client Secrets)
 GOOGLE_CREDENTIALS_FILE = BASE_DIR / "credentials.json"
 
 print(f"📁 Gmail Tokens Directory: {TOKENS_DIR}")
@@ -226,3 +237,8 @@ CACHES = {
         "LOCATION": "otp_cache",
     }
 }
+
+
+import logging
+logging.getLogger("django.core.mail").setLevel(logging.DEBUG)
+logging.getLogger("django.core.mail").addHandler(logging.StreamHandler())

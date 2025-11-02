@@ -19,7 +19,8 @@ import logging
 from .forms import TransactionForm
 from .models import Transaction
 from .ml_utils import predict_fraud
-from .utils import send_fraud_alert_email
+from transactions.utils import send_fraud_alert_email
+
 
 logger = logging.getLogger(__name__)
 

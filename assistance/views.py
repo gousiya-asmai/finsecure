@@ -29,6 +29,16 @@ from assistance.utils import (
     is_gmail_connected,
 )
 from assistance.assistance_utils import send_assistance_email_async
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from users.models import GmailTransaction, UserProfile
+from assistance.models import SmartSuggestion
+from users.utils import fetch_recent_transactions, fetch_latest_emails, save_transactions_to_db
+import logging
+import socket
+
+socket.setdefaulttimeout(30)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -118,7 +128,15 @@ def get_latest_emails(user):
     """Fetch 5 most recent Gmail emails for a user."""
     try:
         gmail_cred = GmailCredential.objects.get(user=user)
-        token_data = json.loads(gmail_cred.token)
+        token_data = {
+    "token": gmail_cred.access_token,
+    "refresh_token": gmail_cred.refresh_token,
+    "token_uri": gmail_cred.token_uri,
+    "client_id": gmail_cred.client_id,
+    "client_secret": gmail_cred.client_secret,
+    "scopes": eval(gmail_cred.scopes or "[]"),
+}
+
         creds = Credentials.from_authorized_user_info(token_data, SCOPES)
         service = build("gmail", "v1", credentials=creds)
 
@@ -147,39 +165,97 @@ def get_latest_emails(user):
 # -------------------------------------------------------------------
 # Dashboard
 # -------------------------------------------------------------------
-@login_required
-def dashboard(request):
-    """User dashboard showing profile, Gmail connection, and suggestions."""
-    user = request.user
-    gmail_connected = is_gmail_connected(user)
 
+
+
+@login_required(login_url="login")
+def dashboard_view(request):
+    """
+    Unified user dashboard — shows Gmail + profile + suggestions.
+    Only displays 'Transaction done' related Gmail messages (excludes fraud/alerts/OTPs).
+    """
     try:
-        user_profile = UserProfile.objects.get(user=user)
-        profile_data = {
-            "income": getattr(user_profile, "income", 0),
-            "occupation": getattr(user_profile, "occupation", ""),
-            "phone": getattr(user_profile, "phone", ""),
+        # ---------------- User Profile ----------------
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+        if not profile.is_complete():
+            messages.warning(request, "⚠ Your profile is incomplete. Please update it.")
+
+        # ---------------- Gmail Transactions ----------------
+        gmail_transactions = list(
+            GmailTransaction.objects.filter(user=request.user)
+            .filter(description__icontains="transaction done")  # only “Transaction done” emails
+            .exclude(description__iregex=r"fraud|alert|security|otp|unauthorized|blocked|suspicious")
+            .order_by("-created_at")[:5]  # show latest 5
+            .values(
+                "description",
+                "amount",
+                "currency",
+                "created_at",
+                "transaction_type",
+                "category",
+                "message_id"
+            )
+        )
+
+        # Add Gmail link for each transaction
+        for txn in gmail_transactions:
+            msg_id = txn.get("message_id")
+            txn["gmail_link"] = f"https://mail.google.com/mail/u/0/#inbox/{msg_id}" if msg_id else None
+            # Simplify description to subject line only
+            txn["description"] = txn["description"].split("\n")[0][:80] if txn["description"] else "(No Subject)"
+
+        # ---------------- Gmail Connection Data ----------------
+        latest_emails = request.session.get("latest_emails", [])
+        connected_gmail = request.session.get("connected_gmail")
+
+        # ---------------- Fetch New Transactions if Empty ----------------
+        if not gmail_transactions:
+            try:
+                fetched = fetch_recent_transactions(request.user, max_results=5)
+                if fetched:
+                    gmail_transactions = fetched[:5]
+            except Exception as e:
+                logger.warning(f"Gmail fetch error (transactions): {e}")
+                gmail_transactions = []
+
+        # ---------------- Fetch Latest Emails ----------------
+        if not latest_emails:
+            try:
+                latest_emails = fetch_latest_emails(request.user, max_results=5)
+            except Exception as e:
+                logger.warning(f"Gmail fetch error (emails): {e}")
+                latest_emails = []
+
+        # ---------------- Gmail Connection Status ----------------
+        gmail_connected = bool(latest_emails or gmail_transactions or connected_gmail)
+
+        # ---------------- Smart Suggestions ----------------
+        suggestions_qs = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")[:5]
+        suggestions = [
+            {"suggestion": s.suggestion, "is_alert": s.is_alert, "created_at": s.created_at}
+            for s in suggestions_qs
+        ]
+
+        # ---------------- Context ----------------
+        context = {
+            "profile": profile,
+            "income": profile.income or 0.0,
+            "gmail_connected": gmail_connected,
+            "connected_gmail": connected_gmail,
+            "latest_emails": latest_emails,
+            "gmail_transactions": gmail_transactions,
+            "suggestions": suggestions,
         }
-    except UserProfile.DoesNotExist:
-        user_profile = None
-        profile_data = {}
-        messages.warning(request, "⚠️ Please complete your profile to get better suggestions.")
 
-    suggestions = SmartSuggestion.objects.filter(user=user).order_by("-created_at")[:5]
+        return render(request, "users/dashboard.html", context)
 
-    transactions = []
-    if gmail_connected:
-        try:
-            transactions = fetch_recent_transactions(user)[:5]
-        except Exception as e:
-            logger.error(f"Error fetching Gmail transactions for dashboard: {e}", exc_info=True)
+    except Exception as e:
+        logger.error(f"❌ Dashboard error: {e}", exc_info=True)
+        messages.error(request, f"Something went wrong loading your dashboard: {str(e)}")
+        return redirect("home")
 
-    return render(request, "users/dashboard.html", {
-        "profile": profile_data,
-        "suggestions": suggestions,
-        "gmail_connected": gmail_connected,
-        "transactions": transactions,
-    })
+
 
 
 # -------------------------------------------------------------------

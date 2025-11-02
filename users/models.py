@@ -55,6 +55,9 @@ class UserProfile(models.Model):
 from django.db import models
 from django.conf import settings
 
+from django.db import models
+from django.conf import settings
+
 class GmailCredential(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -73,14 +76,50 @@ class GmailCredential(models.Model):
     def __str__(self):
         return f"Gmail Credentials for {self.user.username}"
 
+    @property
+    def token(self):
+        """Backward-compatible alias for access_token."""
+        return self.access_token
 
+
+
+
+# transactions/models.py
+# models.py
 class GmailTransaction(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    description = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
     amount = models.FloatField(default=0.0)
+    category = models.CharField(max_length=100, blank=True, null=True)
+    transaction_type = models.CharField(max_length=50, blank=True, null=True)
     currency = models.CharField(max_length=10, default="INR")
     message_id = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    gmail_link = models.URLField(max_length=300, blank=True, null=True)
+
 
     def __str__(self):
-        return f"{self.user.username} - {self.description} ({self.amount})"
+        return f"{self.user.username} - {self.description or 'Transaction'}"
+
+
+class GmailEmail(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    subject = models.CharField(max_length=255)
+    sender = models.CharField(max_length=255)
+    snippet = models.TextField()
+    message_id = models.CharField(max_length=255, unique=True)
+    received_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.subject} ({self.sender})"
+
+class OTPVerification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    otp_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"OTP for {self.user.username} ({self.otp_code})"
+    
+    

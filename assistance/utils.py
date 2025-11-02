@@ -11,7 +11,16 @@ def is_gmail_connected(user):
     """Check if Gmail is connected for a given user."""
     try:
         cred_obj = GmailCredential.objects.get(user=user)
-        creds = Credentials.from_authorized_user_info(eval(cred_obj.token), SCOPES)
+        token_data = {
+    "token": cred_obj.access_token,
+    "refresh_token": cred_obj.refresh_token,
+    "token_uri": cred_obj.token_uri,
+    "client_id": cred_obj.client_id,
+    "client_secret": cred_obj.client_secret,
+    "scopes": eval(cred_obj.scopes or "[]")
+}
+        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+
         service = build('gmail', 'v1', credentials=creds)
         service.users().labels().list(userId='me').execute()  # test API call
         return True
