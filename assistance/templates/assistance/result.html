@@ -8,94 +8,136 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         body {
-            background: radial-gradient(ellipse 70% 60% at 55% 60%, #f2e6ff 40%, #a480e3 100%);
+            min-height: 100vh;
+            background: linear-gradient(120deg,#244b7f 26%, #214672e3 64%, #1a2940 98%);
             font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-            padding-top: 40px;
-            color: #673b89;
+            margin: 0;
         }
-        .card {
-            max-width: 900px;
-            margin: 36px auto;
-            border-radius: 20px;
-            box-shadow: 0px 4px 32px #a480e322, 0 1px 9px #7a4fff15;
-            padding: 34px 28px 28px 28px;
-            background: linear-gradient(135deg, #faf7ff 85%, #e3d1fd 100%);
+        .navbar {
+            background:  #173653 !important;
+            border-bottom: 0;
+            padding: 0.67rem 0;
+            min-height: 56px;
+            width: 100vw; height: 58px;
+        }
+        .navbar-brand {
+            color: #fff !important;
+            font-weight: bold;
+            font-size: 1.75rem;
+            letter-spacing: 1.5px;
+            padding-left: 22px;
+        }
+        .navbar-nav .nav-link {
+            color: #fff !important;
+            font-weight: 600;
+            margin-right: 14px;
+        }
+        .result-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: calc(100vh - 64px);
+            margin-top: 0;
+        }
+        .glass-card {
+            background: rgba(246, 242, 242, 1);
+            max-width: 700px;
+            width: 95%;
+            border-radius: 32px;
+            box-shadow:
+              0 0 0 8px #5e92d1e6,
+              0 0 20px 10px #339dff33,
+              0 4px 30px #193a5e72;
+            margin: 48px auto 0 auto;
+            border: 4px solid #13416a;
+            padding: 42px 44px 38px 44px;
+            height: 90%;
         }
         h2, h4 {
-            color: #7a4fff;
+            color: #22507b;
             text-align: center;
             font-weight: 700;
+            margin-bottom: 22px;
         }
         h4 {
-            font-size: 1.19rem;
             text-align: left;
-        }
-        ul.suggestions {
-            list-style: none;
-            padding-left: 0;
-        }
-        ul.suggestions li {
-            background: #eee5fa;
-            border-left: 5px solid #b081ff;
-            padding: 10px 15px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            color: #673b89;
-            letter-spacing: 0.01em;
-        }
-        ul.suggestions li.alert {
-            background: #fbefff;
-            border-left-color: #ca6cf7;
-            color: #b232ba;
-        }
-        .ml-result {
-            text-align: center;
-            margin-top: 24px;
-            padding: 17px 10px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 1.13em;
-        }
-        .ml-yes {
-            background: linear-gradient(90deg,#f9ccff 60%,#f9edff 100%);
-            color: #b232ba;
-            border: 2px solid #ca6cf7;
-        }
-        .ml-no {
-            background: linear-gradient(90deg,#e7eafd 80%,#f9f7ff 100%);
-            color: #7a4fff;
-            border: 2px solid #b081ff;
+            font-size: 1.12rem;
+            font-weight: 600;
         }
         .info-row {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
             margin-bottom: 12px;
+            gap: 10px 0;
         }
         .info-row p {
             flex: 0 0 48%;
             margin-bottom: 10px;
-            color: #7a4fff;
-            background: #f7f4fe;
-            border-radius: 8px;
-            padding: 6px 12px;
+            color: #195a82;
+            background: #e5f6ff;
+            border-radius: 9px;
+            padding: 8px 19px;
             font-weight: 500;
-            letter-spacing: .04em;
+            letter-spacing: .03em;
+            font-size: 1.08em;
+        }
+        .suggestions {
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 12px;
+        }
+        .suggestions li {
+            background: #f0f7ff;
+            border-left: 4.5px solid #2178b5;
+            padding: 8.5px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            color: #18537c;
+            font-size: 1.01em;
+        }
+        .suggestions li.alert {
+            background: #fff2ef;
+            border-left-color: #ff7c7c;
+            color: #b21010;
+        }
+        .ml-result {
+            text-align: center;
+            margin-top: 16px;
+            margin-bottom: 0;
+            padding: 14px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1.13em;
+            background: linear-gradient(90deg,#f2f8ff 90%,#dceeff 100%);
+            color: #186187;
+            border: 2px solid #abe1fc;
+        }
+        .ml-yes {
+            background: linear-gradient(90deg,#fff0f7 80%,#fce6fb 100%);
+            color: #ce2c7a;
+            border: 2px solid #ff789d;
+        }
+        .ml-no {
+            background: linear-gradient(90deg,#e8fcf9 80%,#ebf7fd 100%);
+            color: #23629b;
+            border: 2px solid #a6e3de;
         }
         .btn-primary {
-            background: linear-gradient(90deg,#965af7 60%,#cda7ff 100%);
+            background: linear-gradient(90deg,#2178b5 60%,#2996e7 100%);
             border: none;
             color: #fff;
             font-weight: 700;
-            border-radius: 33px;
+            border-radius: 48px;
             width: 100%;
-            padding: 13px 0;
-            font-size: 1.08em;
-            box-shadow: 0 2px 14px #bb8afd28;
+            padding: 12px 0;
+            font-size: 1.09em;
+            margin: 19px 0 0 0;
+            box-shadow: 0 2px 14px #79b4e03d;
             transition: background .18s;
         }
         .btn-primary:hover {
-            background: linear-gradient(90deg,#7a4fff 60%,#965af7 100%);
+            background: linear-gradient(90deg,#165484 70%,#2178b5 100%);
             color: #fff;
         }
         .btn-sm {
@@ -103,23 +145,23 @@
             padding: 5px 10px;
         }
         hr {
-            border-top: 2px solid #dab7ff;
+            border-top: 2px solid #badcff6e;
         }
         table.transactions {
             width: 100%;
-            background: #fdfaff;
+            background: #eff7fb;
             border-radius: 12px;
             overflow: hidden;
         }
         table.transactions th {
-            background: #ede2ff;
-            color: #673b89;
+            background: #d8edfb;
+            color: #22507b;
             padding: 10px;
         }
         table.transactions td {
             padding: 10px;
-            border-bottom: 1px solid #e7d7ff;
-            color: #673b89;
+            border-bottom: 1px solid #b2e0fd44;
+            color: #2069a7;
             vertical-align: middle;
         }
         table.transactions tr:last-child td {
@@ -128,17 +170,26 @@
         table.transactions td:last-child {
             text-align: center;
         }
+        @media (max-width:900px) {
+            .glass-card { max-width: 98vw; padding: 10px 2vw; }
+            .info-row p { flex: 0 0 98%; }
+        }
         @media (max-width:600px) {
-            .card {padding: 14px 3px;}
+            .glass-card { padding: 7vw 1.5vw;}
             .info-row p {flex: 0 0 100%;padding:6px 8px;}
         }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="card">
+    <!-- Navbar (matches login style) -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand">FinSecure</span>
+        </div>
+    </nav>
+    <div class="result-container">
+        <div class="glass-card">
             <h2 class="mb-3">Financial Suggestions for {{ profile.name }}</h2>
-
             <!-- Profile Info -->
             <div class="info-row">
                 <p><strong>Income:</strong> ₹{{ profile.income }}</p>
@@ -150,13 +201,12 @@
                 <p><strong>Monthly Savings Goal:</strong> ₹{{ profile.monthly_savings_goal|default:"0" }}</p>
                 <p><strong>Financial Goals:</strong> {{ profile.financial_goals|default:"Not set" }}</p>
             </div>
-
             <hr />
             <!-- Recommendations from Profile -->
             <h4>💡 Profile-Based Recommendations:</h4>
             <ul class="suggestions">
                 {% for suggestion in suggestions %}
-                    {% if "⚠️" in suggestion %}
+                    {% if "⚠" in suggestion %}
                         <li class="alert">{{ suggestion }}</li>
                     {% else %}
                         <li>{{ suggestion }}</li>
@@ -165,14 +215,13 @@
                     <li>No profile-based suggestions.</li>
                 {% endfor %}
             </ul>
-
             <!-- Gmail Suggestions -->
             {% if gmail_suggestions %}
             <hr />
             <h4>📧 Gmail-Based Suggestions:</h4>
             <ul class="suggestions">
                 {% for txn_suggestion in gmail_suggestions %}
-                    {% if "⚠️" in txn_suggestion %}
+                    {% if "⚠" in txn_suggestion %}
                         <li class="alert">{{ txn_suggestion }}</li>
                     {% else %}
                         <li>{{ txn_suggestion }}</li>
@@ -180,7 +229,6 @@
                 {% endfor %}
             </ul>
             {% endif %}
-
             <!-- Gmail Transactions -->
             {% if transactions %}
             <hr />
@@ -202,8 +250,8 @@
                                 <td>{{ txn.description }}</td>
                                 <td class="text-end">{{ txn.currency }} {{ txn.amount }}</td>
                                 <td>
-                                    <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}" 
-                                       target="_blank" 
+                                    <a href="https://mail.google.com/mail/u/0/#inbox/{{ txn.message_id }}"
+                                       target="_blank"
                                        class="btn btn-sm btn-outline-primary">
                                         📧 View Email
                                     </a>
@@ -217,11 +265,10 @@
             </div>
             {% else %}
                 <p class="text-center mt-3">
-                    ⚠️ No Gmail transactions available. 
+                    ⚠ No Gmail transactions available. 
                     <a href="{% url 'connect_gmail' %}" class="btn btn-sm btn-outline-primary mt-2">Reconnect Gmail</a>
                 </p>
             {% endif %}
-
             <!-- ✅ AI-Powered Recommendations -->
             {% if ml_recommendations %}
             <hr />
@@ -232,20 +279,17 @@
                 {% endfor %}
             </ul>
             {% endif %}
-
             <!-- ML Assistance Result -->
             <div class="ml-result {% if ml_assistance_required %}ml-yes{% else %}ml-no{% endif %}">
                 {% if ml_assistance_required %}
-                    ⚠️ According to our ML model, you <strong>may need financial assistance</strong>.
+                    ⚠ According to our ML model, you <strong>may need financial assistance</strong>.
                 {% else %}
                     ✅ According to our ML model, you <strong>likely do not need financial assistance</strong>.
                 {% endif %}
             </div>
-
             <a href="{% url 'assist_home' %}" class="btn btn-primary mt-3">🔙 Back to Form</a>
         </div>
     </div>
-
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -1,4 +1,5 @@
 services:
+  # 1️⃣  Django web app
   - type: web
     name: finance-dashboard
     env: python
@@ -13,7 +14,47 @@ services:
         value: backend.settings
       - key: PYTHON_VERSION
         value: 3.11.9
-cron:
-  - name: gmail-fraud-check
-    schedule: "0 * * * *"   # Every hour
-    command: python manage.py auto_fraud_scan
+      - key: DATABASE_URL
+        fromDatabase:
+          name: finance-db
+          property: connectionString
+      # Gmail + OAuth credentials
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://finance-dashboard.onrender.com/oauth2callback
+      - key: SECRET_KEY
+        generateValue: true
+
+  # 2️⃣  Background worker for Django Q
+  - type: worker
+    name: finance-worker
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py qcluster
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: backend.settings
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        fromDatabase:
+          name: finance-db
+          property: connectionString
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://finance-dashboard.onrender.com/oauth2callback
+      - key: SECRET_KEY
+        sync: false
+
+databases:
+  - name: finance-db
+    plan: free
+
+# (Optional) Keep your cron job if you want a separate hourly scan
