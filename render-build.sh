@@ -5,11 +5,11 @@ echo "🔧 Installing dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
-echo "🧩 Detecting model changes and creating migrations..."
+echo "🧩 Forcing migration detection..."
 python manage.py makemigrations users assistance --noinput || true
 
-echo "🗃️ Applying database migrations..."
-python manage.py migrate --noinput
+echo "🗃️ Applying all migrations (even fake mismatches)..."
+python manage.py migrate --fake-initial --noinput
 
 echo "🎨 Collecting static files..."
 python manage.py collectstatic --noinput
