@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>⚠️ Fraud Alerts</h2>
+    <hr>
+    {% if alerts %}
+        {% for alert in alerts %}
+            <div class="alert alert-warning shadow-sm mb-3">
+                <strong>{{ alert.title }}</strong> <br>
+                <small class="text-muted">{{ alert.created_at|date:"d M Y, H:i" }}</small>
+                <pre class="mt-2">{{ alert.message }}</pre>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-muted">No fraud alerts detected.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
+    "django_crontab",
     "social_django",
     "django_q",
     "users",
@@ -221,14 +222,21 @@ MESSAGE_TAGS = {
 
 # ---------------- Django Q ----------------
 Q_CLUSTER = {
-    "name": "FinSecureQ",
-    "workers": 4,
-    "recycle": 500,
+    "name": "FinSecureCluster",
+    "workers": 4,                # or however many cores you want
     "timeout": 90,
     "retry": 120,
     "queue_limit": 50,
+    "bulk": 10,
     "orm": "default",
+    "recycle": 1,                # ♻️ recycle workers every 1 second
+    "save_limit": 250,
+    "cpu_affinity": 1,
+    "label": "Django Q",
+    "catch_up": False,
 }
+
+
 
 # ---------------- Cache ----------------
 CACHES = {
@@ -237,6 +245,10 @@ CACHES = {
         "LOCATION": "otp_cache",
     }
 }
+
+CRONJOBS = [
+    ('* * * * *', 'users.cron.run_auto_fraud_scan'),
+]
 
 
 import logging

@@ -185,80 +185,129 @@ def update_email_view(request):
 
 
 
+from users.models import GmailTransaction  # make sure it's at the top of the file
+
+# users/views.py
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+import logging
+from users.models import GmailTransaction, FraudAlert, UserProfile
+from assistance.models import SmartSuggestion
+from users.utils import fetch_recent_transactions, fetch_latest_emails, save_transactions_to_db, detect_fraudulent_transaction
+from users.utils import detect_and_alert_fraud
+
+
 @login_required(login_url="login")
 def dashboard_view(request):
     """
-    Display the user dashboard with Gmail + transaction data.
-    Loads Gmail transactions from DB first, and falls back to live fetch if needed.
+    Automatically fetch Gmail data, detect fraud,
+    send HTML fraud alert emails, and update dashboard.
     """
     try:
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
+        # Warn if profile incomplete
         if not profile.is_complete():
             messages.warning(request, "⚠ Your profile is incomplete. Please update it.")
 
-        # ---------------- Gmail data load ----------------
-        from .models import GmailTransaction  # make sure model is imported
+        # ----------------------------------------------------------------
+        # 1️⃣ Fetch and Save New Gmail Transactions
+        # ----------------------------------------------------------------
+        try:
+            new_txns = fetch_recent_transactions(request.user, max_results=25)
+            if new_txns:
+                saved_count = save_transactions_to_db(request.user, new_txns)
+                if saved_count:
+                    detect_and_alert_fraud(request.user)
 
-        # Load existing Gmail transactions from DB
-        gmail_transactions = list(
-            GmailTransaction.objects.filter(user=request.user)
-            .order_by("-created_at")[:10]
-            .values("amount", "category", "transaction_type", "currency", "created_at")
-        )
+                logging.info(f"💾 {saved_count} Gmail transactions saved for {request.user.username}")
+        except Exception as e:
+            logging.warning(f"Gmail fetch error: {e}")
 
-        # Also check session cache for connected Gmail or recent emails
-        latest_emails = request.session.get("latest_emails", [])
-        connected_gmail = request.session.get("connected_gmail")
+        # ----------------------------------------------------------------
+        # 2️⃣ Load Recent Transactions from DB
+        # ----------------------------------------------------------------
+        gmail_transactions = GmailTransaction.objects.filter(user=request.user).order_by("-date")[:10]
 
-        # If DB is empty, attempt to fetch fresh Gmail data
-        if not gmail_transactions:
-            try:
-                gmail_transactions = fetch_recent_transactions(request.user, max_results=25)
-                if gmail_transactions:
-                    save_transactions_to_db(request.user, gmail_transactions)
-            except Exception as e:
-                logging.warning(f"Gmail fetch error (transactions): {e}")
-                gmail_transactions = []
+        # ----------------------------------------------------------------
+        # 3️⃣ Auto-detect Fraud and Send Email Alerts
+        # ----------------------------------------------------------------
+        for tx in gmail_transactions:
+            if not tx.is_fraud:  # only process new/clean ones
+                fraud_result = detect_fraudulent_transaction(tx)
+                if fraud_result and tx.is_fraud:
+                    # check if alert already exists for this transaction
+                    if not FraudAlert.objects.filter(user=request.user, message__icontains=tx.subject).exists():
+                        alert = FraudAlert.objects.create(
+                            user=request.user,
+                            title="🚨 Suspicious Transaction Detected",
+                            message=f"A suspicious transaction was found:\n\nSubject: {tx.subject}\nAmount: ₹{tx.amount}\nReason: {tx.fraud_reason or 'Unknown'}"
+                        )
 
-        # Try fetching latest emails (non-critical)
-        if not latest_emails:
-            try:
-                latest_emails = fetch_latest_emails(request.user, max_results=5)
-            except Exception as e:
-                logging.warning(f"Gmail fetch error (emails): {e}")
-                latest_emails = []
+                        # send HTML fraud alert email
+                        try:
+                            html_content = render_to_string(
+                                "emails/fraud_alert_email.html",
+                                {
+                                    "user": request.user,
+                                    "transaction": tx,
+                                    "fraud_reason": tx.fraud_reason,
+                                    "alert": alert,
+                                },
+                            )
+                            text_content = strip_tags(html_content)
 
-        gmail_connected = bool(latest_emails or gmail_transactions or connected_gmail)
+                            email = EmailMultiAlternatives(
+                                subject="🚨 Fraud Alert - FinSecure",
+                                body=text_content,
+                                from_email="noreply@finsecure.com",
+                                to=[request.user.email],
+                            )
+                            email.attach_alternative(html_content, "text/html")
+                            email.send(fail_silently=True)
 
-        # ---------------- Smart Suggestions ----------------
+                            logging.info(f"📨 HTML Fraud Alert sent to {request.user.email} for tx {tx.id}")
+                        except Exception as e:
+                            logging.error(f"❌ Failed to send HTML fraud email: {e}")
+
+        # ----------------------------------------------------------------
+        # 4️⃣ Latest Emails + Smart Suggestions
+        # ----------------------------------------------------------------
+        try:
+            latest_emails = fetch_latest_emails(request.user, max_results=5)
+        except Exception as e:
+            logging.warning(f"Gmail fetch error (emails): {e}")
+            latest_emails = []
+
         suggestions_qs = SmartSuggestion.objects.filter(user=request.user).order_by("-created_at")[:5]
         suggestions = [
-            {
-                "suggestion": s.suggestion_text,
-                "is_alert": getattr(s, "is_alert", False),
-                "created_at": s.created_at,
-            }
+            {"suggestion": s.suggestion_text, "is_alert": getattr(s, "is_alert", False), "created_at": s.created_at}
             for s in suggestions_qs
         ]
 
-        # ---------------- Context ----------------
+        # ----------------------------------------------------------------
+        # 5️⃣ Render Dashboard
+        # ----------------------------------------------------------------
         context = {
             "profile": profile,
             "income": profile.income or 0.0,
-            "gmail_connected": gmail_connected,
-            "connected_gmail": connected_gmail,
+            "gmail_connected": True,
             "latest_emails": latest_emails,
             "gmail_transactions": gmail_transactions,
             "suggestions": suggestions,
         }
-
         return render(request, "users/dashboard.html", context)
 
     except Exception as e:
         logging.error(f"❌ Dashboard error: {e}", exc_info=True)
-        messages.error(request, f"Something went wrong loading your dashboard: {str(e)}")
+        messages.error(request, f"Error loading dashboard: {str(e)}")
         return redirect("home")
+
 
 @login_required(login_url="login")
 def refresh_gmail_data(request):
@@ -585,3 +634,15 @@ def run_temp_superuser(request):
     return HttpResponse("Superuser created or reset. Delete this view after use.")
 
 
+# users/views.py
+
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from users.models import FraudAlert
+
+@login_required
+def fraud_alerts(request):
+    alerts = FraudAlert.objects.filter(user=request.user).order_by('-created_at')
+    print(f"DEBUG → Logged in user: {request.user}, Alerts found: {alerts.count()}")
+    return render(request, 'users/fraud_alerts.html', {'alerts': alerts})

@@ -13,3 +13,7 @@ services:
         value: backend.settings
       - key: PYTHON_VERSION
         value: 3.11.9
+cron:
+  - name: gmail-fraud-check
+    schedule: "0 * * * *"   # Every hour
+    command: python manage.py auto_fraud_scan

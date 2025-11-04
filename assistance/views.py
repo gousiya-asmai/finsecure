@@ -12,6 +12,16 @@ from django.http import JsonResponse
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 
+from assistance.assistance_utils import send_assistance_email_async
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from users.models import GmailTransaction, UserProfile
+from assistance.models import SmartSuggestion
+from users.utils import fetch_recent_transactions, fetch_latest_emails, save_transactions_to_db
+import logging
+import socket
+
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -168,48 +178,84 @@ def get_latest_emails(user):
 
 
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+import re
+import logging
+from users.models import UserProfile, GmailTransaction
+from assistance.models import SmartSuggestion
+from users.utils import fetch_recent_transactions, fetch_latest_emails
+
+logger = logging.getLogger(__name__)
+
+
+def extract_amount_from_text(text):
+    """
+    Extracts transaction amount from email text using regex.
+    Looks for patterns like ₹12,345.67 or Rs. 1000 etc.
+    """
+    if not text:
+        return 0.0
+    match = re.search(r"(?:INR|Rs\.?|₹)\s*([\d,]+\.?\d*)", text, re.IGNORECASE)
+    if match:
+        try:
+            return float(match.group(1).replace(",", ""))
+        except ValueError:
+            return 0.0
+    return 0.0
+
+
 @login_required(login_url="login")
 def dashboard_view(request):
     """
     Unified user dashboard — shows Gmail + profile + suggestions.
-    Only displays 'Transaction done' related Gmail messages (excludes fraud/alerts/OTPs).
+    Displays all Gmail transaction types (credit/debit/withdrawal).
     """
     try:
         # ---------------- User Profile ----------------
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
-
         if not profile.is_complete():
             messages.warning(request, "⚠ Your profile is incomplete. Please update it.")
 
         # ---------------- Gmail Transactions ----------------
         gmail_transactions = list(
-            GmailTransaction.objects.filter(user=request.user)
-            .filter(description__icontains="transaction done")  # only “Transaction done” emails
-            .exclude(description__iregex=r"fraud|alert|security|otp|unauthorized|blocked|suspicious")
-            .order_by("-created_at")[:5]  # show latest 5
-            .values(
-                "description",
-                "amount",
-                "currency",
-                "created_at",
-                "transaction_type",
-                "category",
-                "message_id"
-            )
-        )
+    GmailTransaction.objects.filter(user=request.user)
+    .filter(subject__icontains="transaction")
+    .exclude(subject__iregex=r"fraud|alert|security|otp|unauthorized|blocked|suspicious")
+    .order_by("-date")
+    .values(
+        "sender",
+        "subject",
+        "amount",
+        "currency",
+        "transaction_type",
+        "date",
+        "message_id",
+        "gmail_link"
+    )[:5]
+)
 
-        # Add Gmail link for each transaction
+
+        # Enhance transactions with links and parsed amounts
         for txn in gmail_transactions:
+            # Gmail link
             msg_id = txn.get("message_id")
-            txn["gmail_link"] = f"https://mail.google.com/mail/u/0/#inbox/{msg_id}" if msg_id else None
-            # Simplify description to subject line only
-            txn["description"] = txn["description"].split("\n")[0][:80] if txn["description"] else "(No Subject)"
+            txn["gmail_link"] = (
+                f"https://mail.google.com/mail/u/0/#inbox/{msg_id}" if msg_id else None
+            )
 
-        # ---------------- Gmail Connection Data ----------------
+            # Parse amount if missing or zero
+            if not txn.get("amount") or txn["amount"] == 0.0:
+                txn["amount"] = extract_amount_from_text(txn.get("body", ""))
+
+            txn["description"] = txn.get("subject") or "(No Subject)"
+            txn["snippet"] = txn.get("body", "")[:100]
+
+        # ---------------- Gmail Data ----------------
         latest_emails = request.session.get("latest_emails", [])
         connected_gmail = request.session.get("connected_gmail")
 
-        # ---------------- Fetch New Transactions if Empty ----------------
         if not gmail_transactions:
             try:
                 fetched = fetch_recent_transactions(request.user, max_results=5)
@@ -219,7 +265,6 @@ def dashboard_view(request):
                 logger.warning(f"Gmail fetch error (transactions): {e}")
                 gmail_transactions = []
 
-        # ---------------- Fetch Latest Emails ----------------
         if not latest_emails:
             try:
                 latest_emails = fetch_latest_emails(request.user, max_results=5)
@@ -227,7 +272,6 @@ def dashboard_view(request):
                 logger.warning(f"Gmail fetch error (emails): {e}")
                 latest_emails = []
 
-        # ---------------- Gmail Connection Status ----------------
         gmail_connected = bool(latest_emails or gmail_transactions or connected_gmail)
 
         # ---------------- Smart Suggestions ----------------
@@ -254,7 +298,6 @@ def dashboard_view(request):
         logger.error(f"❌ Dashboard error: {e}", exc_info=True)
         messages.error(request, f"Something went wrong loading your dashboard: {str(e)}")
         return redirect("home")
-
 
 
 

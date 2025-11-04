@@ -52,7 +52,8 @@ urlpatterns = [
     path("update_email/", views.update_email_view, name="update_email"),
 
     # --- Gmail Integration ---
-    path("connect_gmail/", views.connect_gmail, name="connect_gmail"),
+ 
+   path("fraud-alerts/", views.fraud_alerts, name="fraud_alerts"),
 
     # --- Password Change ---
     path(

@@ -73,3 +73,4 @@ class SmartSuggestion(models.Model):
     def __str__(self):
         tag = "⚠️" if self.is_alert else "💡"
         return f"{tag} {self.user.username} - {self.suggestion[:50]}"
+

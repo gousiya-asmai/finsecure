@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🚨 Fraud Alert</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background-color: #f6f7fb;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      background-color: #ffffff;
+      margin: 30px auto;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+    }
+    h2 {
+      color: #d9534f;
+      text-align: center;
+    }
+    .details {
+      background: #f9f9f9;
+      border-left: 4px solid #d9534f;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 15px;
+    }
+    .footer {
+      font-size: 13px;
+      color: #888;
+      text-align: center;
+      margin-top: 30px;
+    }
+    .btn {
+      display: inline-block;
+      background: #d9534f;
+      color: #fff !important;
+      padding: 10px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🚨 Suspicious Transaction Detected</h2>
+    <p>Hello <strong>{{ user.username }}</strong>,</p>
+    <p>We detected a potentially fraudulent transaction on your account:</p>
+
+    <div class="details">
+      <p><strong>Subject:</strong> {{ subject }}</p>
+      <p><strong>Amount:</strong> ₹{{ amount }}</p>
+      <p><strong>Sender:</strong> {{ sender }}</p>
+      <p><strong>Reason:</strong> {{ reason }}</p>
+    </div>
+
+    <p>Please verify this transaction. If you believe it was not initiated by you, contact your bank immediately.</p>
+
+    {% if gmail_link %}
+    <p style="text-align:center;">
+      <a href="{{ gmail_link }}" class="btn">View Email in Gmail</a>
+    </p>
+    {% endif %}
+
+    <div class="footer">
+      <p>FinSecure | Automated Fraud Monitoring System</p>
+      <p>This is an automated alert — please do not reply.</p>
+    </div>
+  </div>
+</body>
+</html>
